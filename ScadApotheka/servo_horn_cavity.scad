@@ -1,4 +1,7 @@
-/* For
+/* 
+
+
+use <ScadApotheka/servo_horn_cavity.scad>
 
 Best settings so far:
 
