@@ -2,7 +2,7 @@
 
 Usage:
     
-    use <lib/small_servo_cam.scad>
+    use <ScadApotheka/small_servo_cam.scad>
     
     horn(h=4);
     

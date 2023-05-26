@@ -1,5 +1,4 @@
-//include <centerable.scad>
-//include <shapes.scad>
+//include <ScadStoicheia/centerable.scad>
 //
 ///* [Boiler Plate] */
 //

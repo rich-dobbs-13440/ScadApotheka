@@ -2,7 +2,7 @@
 
 Usage:
 
-use <lib/small_3d_printable_scotch_yoke.scad>
+use <ScadApotheka/small_3d_printable_scotch_yoke.scad>
 
 dimensions = scotch_yoke(
     pin_diameter, 
@@ -61,10 +61,9 @@ should be worked up.
 //**************************************************************************************************
 //   Line Ruler   20        30        40        50        60        70        80        90       100
 
-//include <logging.scad>
-include <Scadcenterable.scad>
-use <shapes.scad>
-use <not_included_batteries.scad>
+include <ScadStoicheia/logging.scad>
+include <ScadStoicheia/centerable.scad>
+use <ScadStoicheia/not_included_batteries.scad>
 use <small_servo_cam.scad>
 use <sub_micro_servo.scad>
 use <9g_servo.scad>
@@ -187,7 +186,7 @@ mounted_instance = scotch_yoke_mounting(
     screw_name= screw_name_,
     nuts=[nuts_right_, nuts_left_]);
 
-log_v1("mounted_instance", base_instance, verbosity, DEBUG);
+//log_v1("mounted_instance", base_instance, verbosity, DEBUG);
 
 if (show_stationary_parts_) { 
     options = []; // ["push rod support", [-s, s]]; // undef; 
@@ -425,7 +424,7 @@ module scotch_yoke_moving_parts(
     }
 } 
 
-module scotch_yoke_servo_mounting(self, angle, options, log_verbosity) {
+module scotch_yoke_servo_mounting(self, angle, options, log_verbosity=INFO) {
     
     function coloring(item) = 
         let(
@@ -443,7 +442,7 @@ module scotch_yoke_servo_mounting(self, angle, options, log_verbosity) {
     radial_allowance = member("radial_allowance");
     axial_allowance = member("axial_allowance");
     wall_thickness = member("wall_thickness");
-
+    echo("log_verbosity", log_verbosity);
     display(coloring("servo_mount")) {
         translate([dx_bearing_outside, 0, axle_height]) {
             sub_micro_servo__mount_to_axle(

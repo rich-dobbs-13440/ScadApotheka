@@ -1,8 +1,5 @@
-include <logging.scad>
-include <centerable.scad>
-use <shapes.scad>
-use <not_included_batteries.scad>
-include <material_colors.scad>
+include <ScadStoicheia/centerable.scad>
+include <ScadStoicheia/material_colors.scad>
 include <NopSCADlib/vitamins/ball_bearings.scad>
 
 

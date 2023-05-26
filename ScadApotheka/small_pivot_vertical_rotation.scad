@@ -1,7 +1,7 @@
 /* 
     Usage:
 
-        use <small_pivot_vertical_rotation.scad>
+        use <ScadApotheka/small_pivot_vertical_rotation.scad>
     
 
         small_pivot_vertical_rotation(
@@ -31,11 +31,9 @@
     
 */
 
-include <logging.scad>
-include <centerable.scad>
-use <shapes.scad>
-use <vector_operations.scad>
-use <layout_for_3d_printing.scad>
+include <ScadStoicheia/centerable.scad>
+use <ScadStoicheia/vector_operations.scad>
+use <ScadStoicheia/layout_for_3d_printing.scad>
 include <nutsnbolts-master/cyl_head_bolt.scad>
 
 

@@ -1,7 +1,7 @@
 /* 
 
 Usage: 
-include <small_pivot.scad>
+include <ScadApotheka/small_pivot.scad>
 
 
 */

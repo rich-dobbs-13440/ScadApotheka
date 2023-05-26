@@ -34,10 +34,16 @@ trigger_bearing_id =
     trigger_shaft_diameter 
     + 2 * trigger_shaft_bearing_clearance;
     
+    
+wall_thickness = 500; // missing???
 trigger_bearing_od = 
     trigger_bearing_id
     + 2 * wall_thickness;
        
+ /*
+ 
+ paint_pivot_inner_height = 500 // missing !!!   
+trigger_shaft_catch_clearance = 500; // Missing       
 trigger_shaft_range = 
     paint_pivot_inner_height 
     - trigger_shaft_catch_clearance
@@ -55,7 +61,7 @@ trigger_shaft_length =
 trigger_shaft_dx = 
     trigger_shaft_min_x
     + trigger_shaft_position * trigger_shaft_range;
-
+*/ 
 /* [Trigger Rod Design] */
 show_trigger_rod = true;
 trigger_rod_length = 25;
@@ -63,6 +69,9 @@ trigger_rod_length = 25;
 trigger_rod_color = "RoyalBlue"; // [DodgerBlue, RoyalBlue, Coral]
 trigger_rod_alpha = 1; // [0:0.05:1]
 trigger_rod_angle = 34; // [0: 5 : 40]  
+
+
+/*
 
 
 if (show_trigger_shaft_assembly) {
@@ -211,3 +220,5 @@ module connected_trigger_rod(angle) {
         }
     }
 }
+
+*/
