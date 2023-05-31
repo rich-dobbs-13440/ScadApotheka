@@ -1,6 +1,14 @@
+/* Usage:
+
+    include <ScadApotheka/material_colors.scad>  
+
+*/
+
 // Dark colors not meant to be realistic, but be able to see edges in OpenSCAD!
 
 BRONZE = "#b08d57";
+SILVER = "silver";
+GOLD = "gold";
 STAINLESS_STEEL = "#CFD4D9";
 BLACK_IRON = "#3a3c3e";
 
@@ -51,21 +59,3 @@ PART_34 = "OliveDrab";
 // colors to that are too bright
 //"Yellow"; "Red"
 
-function visualize_info(color_code, alpha) = [color_code, alpha];
-    
-
-module visualize(info,  show_part_colors=false) {
-    color_code = info[0];
-    alpha = info[1];
-    if (show_part_colors) {
-        // Just pass through, so that underlying colors can be seen
-        children();
-    } else if (alpha == 0) {
-        // Don't create anything.  This avoids some artifacts in rendering
-        // such as wrong z ordering or not enough convexity being specified.
-    } else {
-        color(color_code, alpha) {
-            children();
-        }
-    }
-}

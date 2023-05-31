@@ -1,3 +1,18 @@
+/*
+
+
+Provides a 3d printed ptfe quick connect.  
+
+Not as strong in resisting tubing pullout, but cheap and can be integrated into other 3d printed
+parts without requiring end user assembly.
+
+Usage: 
+
+use <ScadApotheka/ptfe_tubing_quick_connect.scad> 
+*/ 
+
+
+
 include <ScadStoicheia/centerable.scad>
 
 orient_for_build = false;
@@ -8,7 +23,8 @@ build_c_clip = true;
 
 /* [Quick_connect_design] */
 show_cross_section = false;
-insert_clip = false;
+show_body_attachment = true;
+insert_clip = true;
 
 tubing_od = 4 + 0;
 
@@ -68,6 +84,11 @@ module end_of_customization() {}
 a_lot = 100;
 
 
+module ptfe_tubing_quick_connect() {
+    echo("\r\n\r\nUsage: \r\n   quick_connect_collet(tubing_allowance=0)\r\n   quick_connect_body(orient_for_build = false) \r\n   c_clip(orient_for_build)\r\n");
+}
+
+
 module quick_connect_collet(tubing_allowance=0) {
     module cutout() {
     }
@@ -98,6 +119,7 @@ module quick_connect_body(orient_for_build = false) {
             union() {
                 can(d=d_collet_face - 2, taper=od_body, h=h_fingernail_gap, center=ABOVE);
                 translate([0, 0, h_fingernail_gap]) can(d=od_body, h=h_body - h_fingernail_gap , center=ABOVE);
+                children();
             }
             can(d=tubing_od + 2 * tubing_allowance, h=a_lot);
             translate([0, 0, 0]) 
@@ -116,15 +138,15 @@ module quick_connect_body(orient_for_build = false) {
     }
     color("blue", alpha=alpha_body) {
         if (orient_for_build) {
-             translate([0, 0, h_body]) rotate([180, 0, 180]) shape();
+             translate([0, 0, h_body]) rotate([180, 0, 180]) shape() children();
         } else { 
             // For display, the default is in the open position, without clamping on the tube.  
-            translate([0, 0, h_face]) shape();
+            translate([0, 0, h_face]) shape() children();
         }
     }
 }
  
-module c_clip(orient_for_build) {
+module quick_connect_c_clip(orient_for_build=false) {
     // Use a sprue to connect the three small parts, which increased bed adhesion. 
     // The pieces break off the sprue without an issue.
     sprue = [od_clip + 2, 2, 1];
@@ -167,10 +189,19 @@ if (build_collet) {
 if (build_body) {
     if (orient_for_build) {
         dx_body = d_collet_face/2 + od_body/2 + od_clip + 1;
-        translate([dx_body, 0, 0]) quick_connect_body(orient_for_build=true);
+        translate([dx_body, 0, 0]) {
+            quick_connect_body(orient_for_build=true) {
+                
+            }
+        }
     } else {
         dz = insert_clip ? h_clip : 0;
-        translate([0, 0, dz]) quick_connect_body(orient_for_build=false);
+        translate([0, 0, dz]) 
+            quick_connect_body(orient_for_build=false){
+                if (show_body_attachment) {
+                    translate([0, 0, h_body]) block([20, 20, 2], center=BELOW);
+                }
+            };
     }
 }
 
@@ -180,7 +211,7 @@ if (build_c_clip) {
         translate([dx_c_clip, 0, 0]) c_clip(orient_for_build=true);
     } else {
         if (insert_clip) {
-            c_clip(orient_for_build=false);
+            quick_connect_c_clip(orient_for_build=false);
         }
     }        
 }
