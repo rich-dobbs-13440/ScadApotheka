@@ -7,10 +7,14 @@ Usage:
 
 include <nutsnbolts-master/cyl_head_bolt.scad>
 include <nutsnbolts-master/data-metric_cyl_head_bolts.scad>
+include <nutsnbolts-master/data-access.scad>
+
 include <ScadStoicheia/centerable.scad>
 include <ScadApotheka/material_colors.scad>
 
 /* [Examples] */
+
+
 
 show_nutcatch_side = false;
 show_screw_with_side_cut = false;
@@ -37,6 +41,74 @@ nut_catch_direction =
 a_lot = 100;
 
 end_of_customization() {}
+
+//nutsnbolts_exploration();
+
+df     = _get_fam("M2");
+nutkey = df[_NB_F_NUT_KEY];
+nutheight = df[_NB_F_NUT_HEIGHT];
+
+module nutsnbolts_exploration() {
+    echo("_get_fam(name)", _get_fam("M2"));
+    echo("_get_screw_fam(n)", _get_screw_fam("M2"));
+    echo("M2 nut height", _get_nut_height(2));
+
+    df     = _get_fam(name);
+    nutkey = df[_NB_F_NUT_KEY];
+    nutheight = df[_NB_F_NUT_HEIGHT];
+    echo("M2 nutheight", nutheight);
+}
+
+
+m2_combo_wrench();
+
+module m2_combo_wrench() {
+    rim = 2;
+    d = nutkey + 2 * rim;
+    l_handle = 20;
+    translation = [l_handle/2 + nutkey/sqrt(3), 0, 0];
+    difference() {
+        center_reflect([1, 0, 0]) {
+            translate(translation) difference() {
+                can(d = d, h = nutheight, center=ABOVE);
+                translate([0, 0, 5]) nutcatch_parallel("M2", clh=10);
+            }
+        }
+        translate(translation) block([10, 3, 10], center=FRONT);
+        translate(translation + [nutkey/2, 0, 0]) block([10, 10, 10], center=FRONT);
+    }
+    block([l_handle, 4, nutheight], center=ABOVE);
+    block([l_handle-5, 4, 5], center=ABOVE); 
+    
+//    module blank() {
+//        can(d = d, h = nutheight);
+//        translate(translation) can(d = d, h = nutheight);
+//        hull() {
+//            can(d = 3, h = nutheight);
+//            translate(translation) can(d = 3, h = nutheight);
+//        }
+//    }
+//    difference() {
+//        blank();
+//        # nutcatch_parallel("M2", clh=10);
+//        //#translate(translation + [0, 0, 5]) nutcatch_sidecut("M2", $fn = 12, clh=10, clk=0);
+//    }
+//    
+    
+    
+//    can(d = d, h = nutheight);
+//    translate([0, 0, 20]) 
+//        difference() {
+//            can(d = d, h = nutheight);
+//            nutcatch_sidecut("M2", $fn = 12, clh=10, clk=0)
+//        }
+//    }
+    
+    
+}
+
+
+
 
 module tuned_M2_nutcatch_side_cut(as_clearance = true, dx=1.5, slot_clh=0.5, slot_clk=0.5) {
     
