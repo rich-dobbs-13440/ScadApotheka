@@ -179,6 +179,7 @@ module m2_screw(
     } else {
         rotate(rotation) {
             color(screw_color) screw(screw_name, $fn=12);
+            echo("screw_name", screw_name);
             if (nut_catch != "bore") {
                 translate([0, 0, dz_nut]) color(nut_color) nut("M2");}
         }
