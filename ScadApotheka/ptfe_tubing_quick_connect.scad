@@ -9,6 +9,11 @@ parts without requiring end user assembly.
 Usage: 
 
 use <ScadApotheka/ptfe_tubing_quick_connect.scad> 
+
+quick_connect_body(orient_for_build = false);
+quick_connect_collet(tubing_allowance=0);
+quick_connect_c_clip(orient_for_build=true);
+
 */ 
 
 
