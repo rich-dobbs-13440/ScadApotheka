@@ -18,11 +18,11 @@ dz_mount_holes = 4;
 dx_connection = 8;
 limit_switch = [20, 6.41, 10];
 
-prong = [0.5, 3, 4];
+prong = [0.5, 3, 4.5];
 
 module end_of_customization() {}
 
-module no_solder_roller_limit_switch_holder() {
+module no_solder_roller_limit_switch_holder(show_vitamins=show_vitamins) {
     back_plate = [limit_switch.x+4, 4, limit_switch.z/2 + prong.z + 4];
     top_plate = [limit_switch.x + 4, limit_switch.y + 4, 4];
     module mounting_screws(as_clearance=false) {
@@ -43,7 +43,7 @@ module no_solder_roller_limit_switch_holder() {
     }
     module connection_screws(as_clearance=false) {
         module one_screw() {
-            translate([0, 0, 13]) {
+            translate([0, 0, back_plate.z]) {
                 rotate([0, 0, -90]) {        
                     if (as_clearance) {
                         hole_through("M2", $fn=12, cld=0.4);
@@ -84,6 +84,7 @@ module no_solder_roller_limit_switch_holder() {
     if (show_vitamins) {
         mounting_screws();
         connection_screws();
+        roller_limit_switch();
     }
     color(PART_33) {
         shape();
@@ -92,7 +93,7 @@ module no_solder_roller_limit_switch_holder() {
 }
 
 if (show_vitamins) {
-    roller_limit_switch();
+    
 }
 
 no_solder_roller_limit_switch_holder();
