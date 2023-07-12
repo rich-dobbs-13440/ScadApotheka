@@ -17,23 +17,121 @@ dx_mount_holes = 5;
 dz_mount_holes = 4;
 dx_connection = 8;
 limit_switch = [20, 6.41, 10];
+dx_ferrule_1 = -9.3;
+dx_ferrule_2 = 0;
+dx_ferrule_3 = 9.3;
+prong = [0.5, 3, 5];
 
-prong = [0.5, 3, 4.5];
+use_ferrules = true;
+wall_ferrule = 2;
+ferrule_16_awg = [1.9, 1.9, 8.5];
+d_ferrule_16_awg = 4.4;
+h_ferrule_16_awg = 6.7;
+h_nut_block = 6;
+
+dz_clamp_screws =7;
 
 module end_of_customization() {}
 
-module no_solder_roller_limit_switch_holder(show_vitamins=show_vitamins) {
-    back_plate = [limit_switch.x+4, 4, limit_switch.z/2 + prong.z + 4];
+function back_plate() = [limit_switch.x+4, 4, limit_switch.z + prong.z + 0.1 ];
+function back_plate_translation() = [0, limit_switch.y/2, -4];
+
+if (show_vitamins) {
+    roller_limit_switch();    
+}
+
+if (use_ferrules) {
+    nsrsh_ferrule_clamp();
+}
+no_solder_roller_limit_switch_holder(use_ferrules=use_ferrules);
+
+module nsrsh_ferrule_clamp() {
+    front_plate = [
+        limit_switch.x, 
+        wall_ferrule, 
+        limit_switch.z/2 + ferrule_16_awg.z
+    ];
+    face_plate = [
+        limit_switch.x + 2*h_nut_block,
+        limit_switch.y + wall_ferrule,
+        ferrule_16_awg.z + 4
+    ];   
+    nut_block = [h_nut_block, face_plate.y,  h_nut_block];  
+    module blank() {
+        translate([0, -limit_switch.y/2, 0]) block(front_plate, center=ABOVE+LEFT);
+        translate([0, limit_switch.y/2, limit_switch.z-prong.z + 1]) block(face_plate, center=ABOVE+LEFT); 
+        center_reflect([1, 0, 0])  translate([face_plate.x/2, limit_switch.y/2, dz_clamp_screws])  block(nut_block, center=LEFT+BEHIND);      
+    }
+    module one_ferrule(as_clearance) {
+        translate([0, 0, limit_switch.z/2]) {
+            if (as_clearance) {
+                block([5, 5, 24], center=ABOVE);
+            } else {
+                color(STAINLESS_STEEL) block(ferrule_16_awg, center=ABOVE);
+                translate([0, 0, ferrule_16_awg.z]) color("black") can(d=d_ferrule_16_awg, h = h_ferrule_16_awg, center=ABOVE);
+                translate([0, 0, ferrule_16_awg.z]) color("red") can(d=1.5, h = 20,center=ABOVE);
+            } 
+        }       
+    }
+    module ferrules(as_clearance=false) {
+        translate([dx_ferrule_1, 0, 0])  one_ferrule(as_clearance);
+        if (as_clearance) {
+            translate([dx_ferrule_2, 0, 0])  one_ferrule(as_clearance);
+        }
+        translate([dx_ferrule_3, 0, 0])  one_ferrule(as_clearance);
+    }
+    module clamp_screws(as_clearance=false) {
+        dx_clamp_screws = face_plate.x/2;
+        center_reflect([1, 0, 0]) {
+            translate([dx_clamp_screws, 0, dz_clamp_screws]) {
+                rotate([0, 90, 0]) {
+                    if (as_clearance) {
+                    } else {
+                        color(STAINLESS_STEEL) {
+                            screw("M2x6", $fn=12);
+                        }
+                        
+                    }
+                }
+            }
+        }        
+    }
+    module shape() {
+        render(convexity=10) difference() {
+            blank();
+            ferrules(as_clearance=true);
+            clamp_screws(as_clearance=true);
+        }        
+    }
+    if (show_vitamins) {
+        ferrules();
+        clamp_screws();
+    }
+    color(PART_20, alpha = 0.25) {
+        shape();
+    }
+}
+
+
+
+module no_solder_roller_limit_switch_holder(show_vitamins=show_vitamins, use_ferrules=false) {
     top_plate = [limit_switch.x + 4, limit_switch.y + 4, 4];
     module mounting_screws(as_clearance=false) {
         center_reflect([1, 0, 0]) {
             translate([dx_mount_holes, 0, dz_mount_holes]) {
                 rotate([90, 0, 0]) {
                     if (as_clearance) {
-                        hole_through("M2", $fn=12, cld=0.4);
+                        hull() {
+                            hole_through("M2", $fn=12, cld=0.4);
+                            translate([0, -4, 0]) hole_through("M2", $fn=12, cld=0.4);
+                        }
                     } else {
                         color(STAINLESS_STEEL) {
-                            translate([0, 0, 3]) screw("M2x12", $fn=12);
+                            if (use_ferrules) {
+                                translate([0, 0, wall_ferrule+limit_switch.y/2]) screw("M2x16", $fn=12);
+                            } else {
+                                translate([0, 0, 3]) screw("M2x12", $fn=12);
+                            }
                             translate([0, 0, -7.5]) nut("M2", $fn=12);
                         }
                     }
@@ -43,7 +141,7 @@ module no_solder_roller_limit_switch_holder(show_vitamins=show_vitamins) {
     }
     module connection_screws(as_clearance=false) {
         module one_screw() {
-            translate([0, 0, back_plate.z]) {
+            translate([0, 0, back_plate().z-4]) {
                 rotate([0, 0, -90]) {        
                     if (as_clearance) {
                         hole_through("M2", $fn=12, cld=0.4);
@@ -74,8 +172,10 @@ module no_solder_roller_limit_switch_holder(show_vitamins=show_vitamins) {
     module shape() {
         render(convexity=10) difference() {
             union() {
-                translate([0, limit_switch.y/2, 0]) block(back_plate, center=ABOVE+RIGHT);
-                translate([0, limit_switch.y/2 + 4, limit_switch.z/2 + prong.z]) block(top_plate, center=ABOVE+LEFT);
+                translate(back_plate_translation()) block(back_plate(), center=ABOVE+RIGHT);
+                if (!use_ferrules) {
+                    translate([0, limit_switch.y/2 + 4, limit_switch.z/2 + prong.z]) block(top_plate, center=ABOVE+LEFT);
+                }
             }
             mounting_screws(as_clearance = true);
             connection_screws(as_clearance = true);
@@ -83,10 +183,12 @@ module no_solder_roller_limit_switch_holder(show_vitamins=show_vitamins) {
     }
     if (show_vitamins) {
         mounting_screws();
-        connection_screws();
-        roller_limit_switch();
+        if (!use_ferrules) {
+            connection_screws();
+        }
+
     }
-    color(PART_33) {
+    color(PART_33, alpha=0.25) {
         shape();
     }
     
@@ -96,4 +198,4 @@ if (show_vitamins) {
     
 }
 
-no_solder_roller_limit_switch_holder();
+
