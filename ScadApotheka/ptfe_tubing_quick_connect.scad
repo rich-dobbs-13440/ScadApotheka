@@ -213,7 +213,7 @@ if (build_body) {
 if (build_c_clip) {
     if (orient_for_build) {
         dx_c_clip = d_collet_face/2 + 0.5 + od_clip/2;
-        translate([dx_c_clip, 0, 0]) c_clip(orient_for_build=true);
+        translate([dx_c_clip, 0, 0]) quick_connect_c_clip(orient_for_build=true);
     } else {
         if (insert_clip) {
             quick_connect_c_clip(orient_for_build=false);
