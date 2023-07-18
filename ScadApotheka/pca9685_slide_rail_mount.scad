@@ -39,7 +39,7 @@ pca9685_slide_rail_mount(center=FRONT, show_vitamins=show_vitamins);
 module board_mounting_screws(as_clearance = false, as_board_clearance = false, dx_holes=dx_holes, dy_holes=dy_holes) {
 
     center_reflect([1, 0, 0]) center_reflect([0, 1, 0]) {
-        translate([dx_holes, dy_holes, sr_pcb_mt__dz_board() + board.z]) {
+        translate([dx_holes, dy_holes, board.z]) {
             if (as_clearance) {
                 hole_through("M2", $fn=12);
             } else if (as_board_clearance) {
@@ -55,7 +55,7 @@ module board_mounting_screws(as_clearance = false, as_board_clearance = false, d
 module board() {
     color("#003366") {
         render(convexity = 10) difference() {
-            translate([0, 0, sr_pcb_mt__dz_board()]) block(board, center=ABOVE);
+            block(board, center=ABOVE);
             board_mounting_screws(as_board_clearance = true);
         }
     }
@@ -65,6 +65,7 @@ module board() {
 module pca9685_slide_rail_mount(
         dx_holes=dx_holes, 
         dy_holes=dy_holes, 
+        dz_extra_under_board = 0,
         center=CENTER, 
         show_vitamins=true) {
     module servo_block_clearance() {
@@ -74,7 +75,8 @@ module pca9685_slide_rail_mount(
         translate([5, dy, dz]) block(servo_block + [10, 0, 0], center = ABOVE+LEFT); 
     }
     module shape() {
-        slide_rail_pcb_mount(board, y_clearance, z_clearance) {
+        slide_rail_pcb_mount(board, y_clearance, z_clearance, dz_extra_under_board=dz_extra_under_board, show_vitamins=show_vitamins) {
+            board();
             union() {
             }
             union() {
@@ -91,12 +93,7 @@ module pca9685_slide_rail_mount(
         center == FRONT ? [board.x/2, 0, 0] : 
         assert(FALSE);
     translate(translation) {
-        if (show_vitamins) {
-            board();
-        }        
-        color(PART_16, alpha=alpha_mounting) {  
-           shape(); 
-        } 
+        shape(); 
     }
     
 }
