@@ -67,12 +67,14 @@ module pca9685_slide_rail_mount(
         dy_holes=dy_holes, 
         dz_extra_under_board = 0,
         center=CENTER, 
+        slide_from_left = false, 
         show_vitamins=true) {
     module servo_block_clearance() {
         y_rail_wall = 2;
+        dx = slide_from_left ? -5 : 5;
         dz = 6;
         dy = board.y/2 - dy_servo_block;
-        translate([5, dy, dz]) block(servo_block + [10, 0, 0], center = ABOVE+LEFT); 
+        translate([dx, dy, dz]) block(servo_block + [10, 0, 0], center = ABOVE+LEFT); 
     }
     module shape() {
         slide_rail_pcb_mount(board, y_clearance, z_clearance, dz_extra_under_board=dz_extra_under_board, show_vitamins=show_vitamins) {
