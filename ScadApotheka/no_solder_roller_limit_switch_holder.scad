@@ -17,10 +17,11 @@ nsrsh_ferrule_clamp(alpha = 1);
 
 include <ScadStoicheia/centerable.scad>
 include <ScadApotheka/material_colors.scad>
-include <ScadApotheka/roller_limit_switch.scad>
+use <ScadApotheka/roller_limit_switch.scad>
 a_lot = 20 + 0;
 /* [Output Control] */
 show_vitamins = true;
+switch_depressed = false;
 show_top_clamp = true;
 show_ferrule_clamp = false;
 alpha_ferrule_clamp = 1; // [1:Solid, 0.25:Ghostly, 0:Invisible]
@@ -29,16 +30,14 @@ alpha_back_plate = 1; // [1:Solid, 0.25:Ghostly, 0:Invisible]
 /* [Customization] */
 
 right_handed_top_plate = true;
+roller_arm_length = 20; //[18:short, 20: long]
 
 /* [Design parameters] */
-dx_mount_holes = 5;
-dz_mount_holes = 4;
 dx_connection = 8;
-limit_switch = [20, 6.41, 10.5];
 dx_ferrule_1 = -9.3;
 dx_ferrule_2 = 0;
 dx_ferrule_3 = 9.3;
-prong = [0.5, 3, 5];
+
 
 plate_thickness = 1; // [0.5:test, 1, 2, 3, 4];
 wall_ferrule = 2;
@@ -50,25 +49,34 @@ dz_clamp_screws =8.5;
 
 module end_of_customization() {}
 
-function back_plate(thickness) = [limit_switch.x, thickness, limit_switch.z + prong.z + 0.1 ];
-function back_plate_translation() = [0, limit_switch.y/2, -4];
+function back_plate(thickness) = [rls_base().x, thickness, rls_base().z + rls_prong().z + 0.1 ];
+function back_plate_translation() = [0, rls_base().y/2, -4];
 
 
 
 if (show_ferrule_clamp) {
-    nsrsh_ferrule_clamp(alpha = alpha_ferrule_clamp);
+    nsrsh_ferrule_clamp(
+        roller_arm_length = roller_arm_length,
+        switch_depressed = switch_depressed,
+        alpha = alpha_ferrule_clamp);
 }
 if (show_top_clamp) {
-    nsrsh_top_clamp(right_handed = right_handed_top_plate, alpha=alpha_back_plate, thickness=plate_thickness);
+    nsrsh_top_clamp(
+        right_handed = right_handed_top_plate, 
+        alpha=alpha_back_plate, 
+        thickness=plate_thickness, 
+        roller_arm_length = roller_arm_length,
+        switch_depressed = switch_depressed);
 }
 
 module roller_limit_switch_mounting_screws(as_clearance=false, adjustment_slot=false, for_ferrules=false, base_plate_thickness = 0) {
+    limit_switch =  rls_base(); 
     nut_thickness = 2;
     required_length = limit_switch.y/2 + (for_ferrules ? wall_ferrule : 0) + base_plate_thickness + nut_thickness;
     screw_length = ceil(required_length / 2) * 2;
     screw_name = str("M2x", screw_length);
     center_reflect([1, 0, 0]) {
-        translate([dx_mount_holes, 0, dz_mount_holes]) {
+        translate(rls_mount_hole_translation()) {
             rotate([90, 0, 0]) {
                 if (as_clearance) {
                     if (adjustment_slot) {
@@ -96,7 +104,12 @@ module roller_limit_switch_mounting_screws(as_clearance=false, adjustment_slot=f
     }
 }
 
-module nsrsh_ferrule_clamp(alpha = 1) {
+module nsrsh_ferrule_clamp(
+        roller_arm_length = 20,
+        switch_depressed = false, 
+        alpha = 1) {
+    limit_switch =  rls_base(); 
+    prong = rls_prong();
     front_plate = [
         limit_switch.x + 1, 
         wall_ferrule, 
@@ -164,6 +177,7 @@ module nsrsh_ferrule_clamp(alpha = 1) {
         }        
     }
     if (show_vitamins) {
+        roller_limit_switch(roller_arm_length=roller_arm_length, switch_depressed=switch_depressed);
         ferrules();
         clamp_screws();
         roller_limit_switch_mounting_screws(for_ferrules=true);
@@ -181,8 +195,14 @@ module nsrsh_top_clamp(
         right_handed = true,
         alpha=1, 
         thickness=4, 
-        use_dupont_pins = true) {
-    top_plate = [limit_switch.x + 4, limit_switch.y + thickness, 4.5];
+        use_dupont_pins = true, 
+        roller_arm_length = 20,
+        switch_depressed = false) {
+            
+   limit_switch =  rls_base();  
+   prong = rls_prong();
+            
+    top_plate = [limit_switch.x + 4, limit_switch.y + thickness, 9];
 
     module connection_screws(as_clearance=false) {
         screw_length = use_dupont_pins ? 6 : 10;
@@ -193,22 +213,22 @@ module nsrsh_top_clamp(
             translate([0, 0, dz]) {  // back_plate_translation
                 rotate([0, 0, -90]) {        
                     if (as_clearance) {
-                        hole_through("M2", $fn=12, cld=0.4, l=screw_length + 1);
+                        translate([0, 0, 10]) hole_through("M2", $fn=12, cld=0.4, l=screw_length + 1, h=10);
                         translate([0, 0, dz_nutcut])  {
                             nutcatch_sidecut(
                                 name   = "M2",  // name of screw family (i.e. M3, M4, ...) 
                                 l      = 50.0,  // length of slot
                                 clk    =  0.5,  // key width clearance
-                                clh    =  0.25,  // height clearance
+                                clh    =  0.5,  // height clearance
                                 clsl   =  0.1);      
                             if (use_dupont_pins) {
-                               translate([0, 1.3, 0]) rod(d=1., l=a_lot, $fn=12);
+                               translate([0, 1.3, -0.1]) rod(d=1.2, l=a_lot, $fn=12);
                             }
                         }
                     } else {
                         color(STAINLESS_STEEL) {
-                            translate([0, 0, -1]) screw(screw_name, $fn=12);
-                            translate([0, 0, dz_nutcut]) nut("M2", $fn=12);
+                            translate([0, 0, -0.]) screw(screw_name, $fn=12);
+                            translate([0, 0, dz_nutcut-0.4]) nut("M2", $fn=12);
                             if (use_dupont_pins) {
                                 
                             } else {
@@ -220,12 +240,9 @@ module nsrsh_top_clamp(
                 }
             }
         }
-        translate([-1, 0, 0]) one_screw();
-        center_reflect([1, 0, 0]) {
-            translate([dx_connection, 0, 0]) {
-               one_screw(); 
-            }
-        }       
+        for (dx = rls_dx_prongs()) {
+            translate([dx, 0, 0]) one_screw();
+        }      
     }  
     module shape() {
         top_plate_translation = [
@@ -237,6 +254,11 @@ module nsrsh_top_clamp(
             union() {
                 translate(back_plate_translation()) block(back_plate(thickness), center=ABOVE+RIGHT);
                 translate(top_plate_translation) block(top_plate, center=ABOVE+LEFT);
+                for (dx = rls_dx_prongs()) {
+                    translate([dx, 0, limit_switch.y+0.5]) {
+                        center_reflect([1, 0, 0]) translate([0.5, 0, 0]) block([1, limit_switch.y, prong.z], center=ABOVE+FRONT);
+                    }
+                }
             }
             roller_limit_switch_mounting_screws(as_clearance = true);
             connection_screws(as_clearance = true);
@@ -244,7 +266,7 @@ module nsrsh_top_clamp(
     }
     module right_handed_part() {
         if (show_vitamins) {
-            roller_limit_switch();   
+            roller_limit_switch(roller_arm_length=roller_arm_length, switch_depressed=switch_depressed);   
             roller_limit_switch_mounting_screws(base_plate_thickness = thickness);
             connection_screws();
 
