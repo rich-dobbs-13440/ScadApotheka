@@ -10,7 +10,7 @@ nsrsh_top_clamp(
         right_handed = true,
         alpha=1, 
         thickness=4, 
-        use_dupont_pins = true);
+        use_dupont_connectors = true);
 nsrsh_ferrule_clamp(alpha = 1);
 
 */
@@ -18,6 +18,8 @@ nsrsh_ferrule_clamp(alpha = 1);
 include <ScadStoicheia/centerable.scad>
 include <ScadApotheka/material_colors.scad>
 use <ScadApotheka/roller_limit_switch.scad>
+use <ScadApotheka/dupont_pins.scad>
+
 a_lot = 20 + 0;
 /* [Output Control] */
 show_vitamins = true;
@@ -203,7 +205,7 @@ module nsrsh_top_clamp(
         alpha=1, 
         thickness=4, 
         recess_mounting_screws = false,
-        use_dupont_pins = true, 
+        use_dupont_connectors = true, 
         roller_arm_length = 20,
         switch_depressed = false) {
             
@@ -211,12 +213,28 @@ module nsrsh_top_clamp(
    prong = rls_prong();
             
     top_plate = [limit_switch.x + 4, limit_switch.y + thickness, 9];
+    screw_length = use_dupont_connectors ? 6 : 10;
+    dz_nutcut = -screw_length + 3;        
+    module dupont_connectors(as_clearance = false)  {
+        dz = limit_switch.z/2 + prong.z - dz_nutcut;
+        dy = limit_switch.y/2;
+        for (dx = rls_dx_prongs()) {
+            translate([dx + 1.3, dy, dz]) 
+                dupont_connector(
+                    wire_color="red", 
+                    housing_color="black",         
+                    center=RIGHT,
+                    housing=DUPONT_STD_HOUSING(),
+                    has_pin=true);              
+        }   
+      
+    }
 
     module connection_screws(as_clearance=false) {
-        screw_length = use_dupont_pins ? 6 : 10;
+        
         screw_name = str("M2x", screw_length);
         dz =limit_switch.z/2 + prong.z + screw_length;  //  back_plate(thickness).z + back_plate_translation().z ;
-        dz_nutcut = -screw_length + 3;
+        
         module one_screw() {
             translate([0, 0, dz]) {  // back_plate_translation
                 rotate([0, 0, -90]) {        
@@ -229,7 +247,7 @@ module nsrsh_top_clamp(
                                 clk    =  0.5,  // key width clearance
                                 clh    =  0.5,  // height clearance
                                 clsl   =  0.1);      
-                            if (use_dupont_pins) {
+                            if (use_dupont_connectors) {
                                translate([0, 1.3, -0.1]) rod(d=1.2, l=a_lot, $fn=12);
                             }
                         }
@@ -237,13 +255,12 @@ module nsrsh_top_clamp(
                         color(STAINLESS_STEEL) {
                             translate([0, 0, -0.]) screw(screw_name, $fn=12);
                             translate([0, 0, dz_nutcut-0.4]) nut("M2", $fn=12);
-                            if (use_dupont_pins) {
-                                
-                            } else {
+                            if (!use_dupont_connectors) {
                                 translate([0, 0, 1.8]) nut("M2", $fn=12);
                                 translate([0, 0, 1.8 + 1.6 + 0.5]) nut("M2", $fn=12);
                             }
-                        }  
+                        }
+                        
                     } 
                 }
             }
@@ -270,6 +287,9 @@ module nsrsh_top_clamp(
             }
             roller_limit_switch_mounting_screws(as_clearance = true, recess = recess_mounting_screws, base_plate_thickness = thickness);
             connection_screws(as_clearance = true);
+            if (use_dupont_connectors) {
+                dupont_connectors(as_clearance = true);
+            }
         }      
     }
     module right_handed_part() {
@@ -277,7 +297,9 @@ module nsrsh_top_clamp(
             roller_limit_switch(roller_arm_length=roller_arm_length, switch_depressed=switch_depressed);   
             roller_limit_switch_mounting_screws(base_plate_thickness = thickness, recess = recess_mounting_screws);
             connection_screws();
-
+            if (use_dupont_connectors) {
+                dupont_connectors();
+            }
         }
         color(PART_33, alpha) {
             shape();
