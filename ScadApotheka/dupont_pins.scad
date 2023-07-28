@@ -1,6 +1,6 @@
 /*
 
-use <lib/dupont_pins.scad>
+use <ScadApotheka/dupont_pins.scad>
 
 w_h = DUPONT_HOUSING_WIDTH();
 l_hsg_std = DUPONT_HOUSING_WIDTH();
@@ -20,15 +20,14 @@ dupont_connector(
     has_pin=false);
 
 */
-include <centerable.scad>
-use <shapes.scad>
+include <ScadStoicheia/centerable.scad>
 include <small_pivot.scad>
 
 
 
 
 /* [Show] */
-show_top_level = false;
+show_top_level = true;
 show_only_one = false;
 one_to_show = -10; // [-13:"customized_pin_holder_slide", -17:"customized wire holders", -7: "Customized pin holder", -4:"male_pin(insulation_wrap=0.75, orient=RIGHT)", -3:"Isolate insulation wrap - half closed", -2:"Isolate insulation wrap - closed", -1:" male_pin(orient=LEFT)", 0:"Selectable housing lengths for dupont connector", 1:"default dupont_connector()", 2:"dupont_connector(has_pin=true)",  4:"Custom colors for dupont connector", 7:"Male pin orientation", 10:"Female pin orientation"]
 
