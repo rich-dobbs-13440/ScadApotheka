@@ -21,22 +21,35 @@ include <ScadApotheka/material_colors.scad>
 a_lot = 100 + 0;
 
 od_ptfe_tubing = 4 + 0;
-d_filament = 1.75;
+d_filament = 1.75 + 0;
 
 /* [Example] */
+show_assembled = true;
+
 show_ptfe_tubing_collet = true;
-show_sample_key_hole = true;
+show_sample_key_hole = false;
 show_qtcc_ptfe_tubing_clip = true;
 
+
+/* [Animation] */
+
+az_clip = 0; //[0:90]
+dz_crossection =-1; // [-1:0.1:3]
+
+alpha_clip = 1; //[1: Solid, 0.25: Ghostly, 0:Invisible]
+
 /* [Clearances] */
-x_clearance = 0.0;
-y_clearance = 0.0;
-z_clearance = 00;
+x_clearance = 0.25;
+y_clearance = 0.25;
+z_clearance = 0.25;
 tube_clearance = 0.25;
+loose_tube_clearance = 1;
 filament_clearance = 0.25;
 key_clearance = 0.5;
 
 aspect_ratio_tuning = 1;
+
+
 
 
 /* [PTFE Clamp Dimensions] */ 
@@ -48,9 +61,9 @@ z_clamp = 8;
 x_neck_clamp = 6;
 x_slot_clamp = 1;
 // Tune if necessary to hold tube
-dx_squeeze_clamp = 3;  
+dx_squeeze_clamp = 2; // [0:3]  
 barb_spacing = 2;
-barb_bite = 1;
+barb_bite = 0.5;
 
 x_connector = 10;
 y_connector = 6;
@@ -78,14 +91,17 @@ connector_dimensions = qtcc_dimensions(
     dx_squeeze_connector, aspect_ratio_tuning);  
 
 if (show_ptfe_tubing_collet) {
-    translate([20, 0, 0]) qtcc_ptfe_tubing_collet();
+    rotation = [0, 0, 0];
+    translation = show_assembled ? [0, 0, z_clip/2] : [20, 0, 0]; 
+    translate(translation) rotate(rotation) qtcc_ptfe_tubing_collet();
 }
 
 if (show_qtcc_ptfe_tubing_clip) {
-     translate([0, 0, 0]) qtcc_ptfe_tubing_clip();
+     translate([0, 0, 0]) rotate([0, 0, az_clip])  qtcc_ptfe_tubing_clip();
 }
 
 if (show_sample_key_hole) {
+    
   translate([-30, 0, 0])  qtcc_ptfe_tubing_sample_key_hole();
 }
 
@@ -93,9 +109,10 @@ module qtcc_ptfe_tubing_collet() {
 
     barb_count = ceil(z_clamp/barb_spacing);
     module tubing_clearance() {
+        id = od_ptfe_tubing+2*tube_clearance;
         for (i = [0: barb_count-1]) {
             translate([0, 0, i*barb_spacing]) 
-                can(d=od_ptfe_tubing+2*tube_clearance, taper=od_ptfe_tubing-barb_bite,  h = barb_spacing, center=ABOVE);
+                can(d=id, taper=id-barb_bite,  h = barb_spacing, center=ABOVE);
         }
     }
     module entrance() {
@@ -124,31 +141,31 @@ module qtcc_ptfe_tubing_clip() {
                 quarter_turn_clamping_connector_keyhole(clamp_dimensions);        
     }
     module tubing() {
-        can(d=od_ptfe_tubing + 2 * tube_clearance, h = z_clamp + core_length/2, center=ABOVE);
+        can(d=od_ptfe_tubing + 2 * loose_tube_clearance, h = z_clamp + core_length/2, center=ABOVE);
     }    
-    render(convexity=10) difference() {
-        blank();
-        clamping_keyhole();
-        tubing();
+    color(PART_20, alpha = alpha_clip) {
+        render(convexity=10) difference() {
+            blank();
+            clamping_keyhole();
+            tubing();
+            translate([0, 0, dz_crossection]) plane_clearance(BELOW);
+        }
     }
 } 
 
 module qtcc_ptfe_tubing_sample_key_hole() {
     key_extent = gtcc_extent(connector_dimensions); 
+    module entrance() {
+        can(d=entrance_diameter, h=a_lot);
+    }
+    
     module base() {
-        
-        block([20, 20, z_connector - 0.5], center=ABOVE);
-        // Bridging support
-        center_reflect([0, 1, 0]) 
-            translate([0, key_extent.y/2, z_connector]) 
-                block([key_extent.x + 5 , key_extent.y, 1], center=RIGHT);
-        center_reflect([1, 0, 0]) 
-            translate([key_extent.y/2,  0, z_connector+0.25]) 
-                block([key_extent.y/2 + 5, key_extent.x, 1], center=ABOVE+FRONT);        
+        block([20, 20, z_connector + 2], center=ABOVE);  
     }
     render(convexity=10) difference() {
         base();
         quarter_turn_clamping_connector_keyhole(connector_dimensions);
+        entrance();
     }
 }
     
@@ -175,13 +192,45 @@ function qtcc_calculate_cam_dimensions(s_open, s_closed, key_width, z_cam, aspec
   let(
     radius_open = sqrt(s_open * s_open + key_width * key_width),
     aspect_ratio = aspect_ratio_tuning * s_closed / s_open,
+    iar = 1/aspect_ratio,
     x_0 = s_open / 2,
     y_0 = key_width / 2,
-    denominator = 1 - (y_0^2 / (aspect_ratio^2 * x_0^2)),
-    x_cam = 2 * sqrt(x_0^2 / denominator),
-    y_cam = x_cam * aspect_ratio
+    x_cam = sqrt(x_0^2  + (iar^2*y_0^2)),
+    y_cam = x_cam*aspect_ratio
   )
   [x_cam, y_cam, z_cam];
+
+
+//function calculate_cam_dimensions(s_open, s_closed, key_width, z_cam, aspect_ratio_tuning) = 
+//  let(
+//    rect_open = [s_open, key_width, 5],
+//    radius_open = sqrt(s_open * s_open + key_width * key_width),
+//    theta_open = atan(key_width / s_open),
+//    aspect_ratio = aspect_ratio_tuning * s_closed / s_open,
+//    x_0 = rect_open[0] / 2,
+//    y_0 = rect_open[1] / 2,
+//    denominator = 1 - (y_0^2 / (aspect_ratio^2 * x_0^2)),
+//    x_cam = sqrt(x_0^2 / denominator),
+//    y_cam = x_cam * aspect_ratio
+//  )
+//  [x_cam, y_cam, z_cam];
+//  
+//    let(
+//    //rect_open = [s_open, key_width, 5],
+//    //radius_open = sqrt(s_open * s_open + key_width * key_width),
+//    //theta_open = atan(key_width / s_open),
+//    //denominator = 1 - (y_0^2 / (iar^2 * x_0^2)),
+//    //x_cam = sqrt(x_0^2 / denominator),    
+//    aspect_ratio = aspect_ratio_tuning * s_closed / s_open,
+//    iar = 1/aspect_ratio,
+//    x_0 = s_open / 2,
+//    y_0 = key_width / 2,
+//    x_cam = sqrt(x_0^2  + (iar^2*y_0^2)),
+//    y_cam = x_cam*aspect_ratio,
+//    value = (x_0/x_cam)^2 + (y_0/y_cam)^2
+//  )
+//  echo("value", value)
+//  [x_cam, y_cam, z_cam];
 
 
 module quarter_turn_clamping_connector_key(core_length,  dimensions_1, dimensions_2) {
@@ -197,8 +246,7 @@ module quarter_turn_clamping_connector_key(core_length,  dimensions_1, dimension
         extent = gtcc_extent(dimensions);
         x_neck = gtcc_x_neck(dimensions);
         x_slot  = gtcc_x_slot(dimensions); 
-       
-        
+
         base_profile = [extent.x, extent.y, 0.1];
         neck_profile = [x_neck, extent.y, 0.1];
         render(convexity = 10) difference() {
@@ -206,7 +254,9 @@ module quarter_turn_clamping_connector_key(core_length,  dimensions_1, dimension
                 block(base_profile, center=ABOVE);
                 translate([0, 0, extent.z]) block(neck_profile, center=BELOW);
             }
-            block([x_slot, a_lot, a_lot]);
+            if (x_slot > 0) {
+                block([x_slot, a_lot, a_lot]);
+            }
         }
     }
     
@@ -229,16 +279,16 @@ module quarter_turn_clamping_connector_keyhole(dimensions) {
     x_neck =  gtcc_x_neck(dimensions);
     dx_squeeze = gtcc_dx_sqeeze(dimensions);
     aspect_ratio_tuning = gtcc_aspect_ratio_tuning(dimensions);
-    
-    
+
     module cam_shape(cam) {
         scale([cam.x, cam.y, cam.z]) {
             cylinder(h = 1, r = 1, center=true, $fn=30);
         }
     }
-    
     module key_insertion_clearance() {
-        translate([0, 0, -clearances.x]) block(extent + 2 * clearances, center=ABOVE);
+        z_bridging = 0.5;
+        translate([0, 0, -clearances.x]) block(extent + 2 * clearances + [0, 0, z_bridging], center=ABOVE);
+        translate([0, 0, extent.z+clearances.z + z_bridging]) block([extent.y, extent.y, z_bridging], center=ABOVE);
     }
     module base_profile() {
         
@@ -246,8 +296,11 @@ module quarter_turn_clamping_connector_keyhole(dimensions) {
         s_closed = extent.x - dx_squeeze;
         key_width = extent.y; 
         z_cam = clearances.z;
-         cam = qtcc_calculate_cam_dimensions(s_open, s_closed, key_width, z_cam, aspect_ratio_tuning);
-         translate([0, 0, extent.z]) scale([cam.x, cam.y, cam.z]) can(d = 1, h =1, center=ABOVE, $fn=50);
+        echo("s_open", s_open);
+        echo("s_closed", s_closed);
+        cam = qtcc_calculate_cam_dimensions(s_open, s_closed, key_width, z_cam, aspect_ratio_tuning);
+        //cam = calculate_cam_dimensions(s_open, s_closed, key_width, z_cam, aspect_ratio_tuning);
+        translate([0, 0, extent.z]) cam_shape(cam);
     }
     module neck_profile() {
         d_neck = sqrt((x_neck + 2 * clearances.x)^2 + (extent.y + 2 * clearances.y)^2);
@@ -260,7 +313,7 @@ module quarter_turn_clamping_connector_keyhole(dimensions) {
         }        
     }
     module cavity() {
-        key_insertion_clearance();
+       key_insertion_clearance();
         rotation_clearance();
     }
     module quarter_turn_stops() {
