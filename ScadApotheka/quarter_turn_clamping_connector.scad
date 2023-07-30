@@ -29,9 +29,9 @@ show_sample_key_hole = true;
 show_qtcc_ptfe_tubing_clip = true;
 
 /* [Clearances] */
-x_clearance = 0.5;
-y_clearance = 0.5;
-z_clearance = 0.5;
+x_clearance = 0.0;
+y_clearance = 0.0;
+z_clearance = 00;
 tube_clearance = 0.25;
 filament_clearance = 0.25;
 key_clearance = 0.5;
@@ -42,13 +42,15 @@ aspect_ratio_tuning = 1;
 /* [PTFE Clamp Dimensions] */ 
 entrance_diameter = 5;
 
-x_clamp = 12;
+x_clamp = 10;
 y_clamp = 6; 
 z_clamp = 8;
-x_neck_clamp = 7;
+x_neck_clamp = 6;
 x_slot_clamp = 1;
 // Tune if necessary to hold tube
-dx_squeeze_clamp = 0.5;  
+dx_squeeze_clamp = 3;  
+barb_spacing = 2;
+barb_bite = 1;
 
 x_connector = 10;
 y_connector = 6;
@@ -58,7 +60,7 @@ x_slot_connector = 0;
 dx_squeeze_connector = 0.1;  // Mostly just take ouot the clearance
 
 core_length = 0.1;
-clip_wall = 4;
+clip_wall = 6;
 z_clip = 4;
 
 module end_of_customization() { }
@@ -88,8 +90,13 @@ if (show_sample_key_hole) {
 }
 
 module qtcc_ptfe_tubing_collet() {
-    module tubing() {
-        can(d=od_ptfe_tubing + 2*tube_clearance, h = z_clamp + core_length/2, center=ABOVE);
+
+    barb_count = ceil(z_clamp/barb_spacing);
+    module tubing_clearance() {
+        for (i = [0: barb_count-1]) {
+            translate([0, 0, i*barb_spacing]) 
+                can(d=od_ptfe_tubing+2*tube_clearance, taper=od_ptfe_tubing-barb_bite,  h = barb_spacing, center=ABOVE);
+        }
     }
     module entrance() {
         translate([0, 0, z_clamp + core_length]) 
@@ -100,7 +107,7 @@ module qtcc_ptfe_tubing_collet() {
     }
     render(convexity=10) difference() {
         quarter_turn_clamping_connector_key(core_length,  clamp_dimensions, connector_dimensions);
-        tubing();
+        tubing_clearance();
         filament();
         entrance();
     }
@@ -127,9 +134,17 @@ module qtcc_ptfe_tubing_clip() {
 } 
 
 module qtcc_ptfe_tubing_sample_key_hole() {
-    
+    key_extent = gtcc_extent(connector_dimensions); 
     module base() {
+        
         block([20, 20, z_connector - 0.5], center=ABOVE);
+        // Bridging support
+        center_reflect([0, 1, 0]) 
+            translate([0, key_extent.y/2, z_connector]) 
+                block([key_extent.x + 5 , key_extent.y, 1], center=RIGHT);
+        center_reflect([1, 0, 0]) 
+            translate([key_extent.y/2,  0, z_connector+0.25]) 
+                block([key_extent.y/2 + 5, key_extent.x, 1], center=ABOVE+FRONT);        
     }
     render(convexity=10) difference() {
         base();
