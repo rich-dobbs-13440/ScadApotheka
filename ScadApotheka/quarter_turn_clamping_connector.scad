@@ -8,8 +8,17 @@ Usage:
     use <ScadApotheka/quarter_turn_clamping_connector.scad>
     
 
-    // TODO: Copy the example here when its working
-
+    render(convexity=10) difference() {
+        base();
+        entrance();        
+        translate(from_base_plate_to_where_used) qtcc_ptfe_tubing_connector_keyhole();
+    }
+    
+    
+    translate([dx_for_printing, dy_for_printing, 0]) qtcc_ptfe_tubing_collet();
+    
+    
+    translate([dx_for_printing, dy_for_printing, 0]) qtcc_ptfe_tubing_clip();
 
 */
 
@@ -24,10 +33,10 @@ od_ptfe_tubing = 4 + 0;
 d_filament = 1.75 + 0;
 
 /* [Example] */
-show_assembled = true;
+show_assembled = false;
 
 show_ptfe_tubing_collet = true;
-show_sample_key_hole = false;
+show_sample_key_hole = true;
 show_qtcc_ptfe_tubing_clip = true;
 
 
@@ -67,7 +76,8 @@ y_connector = 6;
 z_connector = 6;
 x_neck_connector = 6;
 x_slot_connector = 0;
-dx_squeeze_connector = 0.1;  // Mostly just take out the clearances
+// Tune if necessary to hold connector in keyhole
+dx_squeeze_connector = 1.5;  
 
 core_length = 0.1;
 clip_wall = 3;
@@ -82,6 +92,7 @@ clamp_dimensions = qtcc_dimensions(
     x_clearance, y_clearance, z_clearance, 
     x_neck_clamp, x_slot_clamp, 
     dx_squeeze_clamp, aspect_ratio_tuning);
+
 connector_dimensions = qtcc_dimensions(
     x_connector, y_connector, z_connector, 
     x_clearance, y_clearance, z_clearance, 
@@ -90,7 +101,7 @@ connector_dimensions = qtcc_dimensions(
 
 if (show_ptfe_tubing_collet) {
     rotation = [0, 0, 0];
-    translation = show_assembled ? [0, 0, z_clip_base] : [20, 0, 0]; 
+    translation = show_assembled ? [0, 0, dz_clip_base] : [20, 0, 0]; 
     translate(translation) rotate(rotation) qtcc_ptfe_tubing_collet();
 }
 
@@ -127,6 +138,8 @@ module qtcc_ptfe_tubing_collet() {
         entrance();
     }
 }
+
+
         
 module qtcc_ptfe_tubing_clip() { 
     key_extent = gtcc_extent(clamp_dimensions);   
@@ -153,6 +166,11 @@ module qtcc_ptfe_tubing_clip() {
     }
 } 
 
+module qtcc_ptfe_tubing_connector_keyhole() {
+    quarter_turn_clamping_connector_keyhole(connector_dimensions);
+}
+
+
 module qtcc_ptfe_tubing_sample_key_hole() {
     key_extent = gtcc_extent(connector_dimensions); 
     module entrance() {
@@ -164,8 +182,8 @@ module qtcc_ptfe_tubing_sample_key_hole() {
     }
     render(convexity=10) difference() {
         base();
-        quarter_turn_clamping_connector_keyhole(connector_dimensions);
-        entrance();
+        entrance();        
+        qtcc_ptfe_tubing_connector_keyhole();
     }
 }
     
