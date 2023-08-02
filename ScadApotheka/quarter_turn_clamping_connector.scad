@@ -2,20 +2,24 @@
 
 This locks pieces together by rotating the key a quarter turn after insertion. 
 
-If desire, the keyhole can compress the key upon turning.abs
+If desire, the keyhole can compress the key upon turning. 
 Usage:
 
     use <ScadApotheka/quarter_turn_clamping_connector.scad>
+    
+    
+    // This file uses a specific application as an example.
     
 
     render(convexity=10) difference() {
         base();
         entrance();        
-        translate(from_base_plate_to_where_used) qtcc_ptfe_tubing_connector_keyhole();
+        translate(from_base_plate_to_where_used) 
+            qtcc_ptfe_tubing_connector_keyhole(is_filament_entrance=is_filament_entrance, print_from_key_opening);
     }
     
     
-    translate([dx_for_printing, dy_for_printing, 0]) qtcc_ptfe_tubing_collet();
+    translate([dx_for_printing, dy_for_printing, 0]) qtcc_ptfe_tubing_collet(is_filament_entrance=is_filament_entrance);
     
     
     translate([dx_for_printing, dy_for_printing, 0]) qtcc_ptfe_tubing_clip();
@@ -37,7 +41,10 @@ show_assembled = false;
 
 show_ptfe_tubing_collet = true;
 show_sample_key_hole = true;
-show_qtcc_ptfe_tubing_clip = true;
+show_ptfe_tubing_clip = true;
+
+show_filament_path = true;
+is_filament_entrance = true;
 
 
 /* [Animation] */
@@ -58,8 +65,12 @@ key_clearance = 0.5;
 
 aspect_ratio_tuning = 1;
 
+/* [PTFE Tubing Core Dimensions] */
+core_length = 0.1;
+
 /* [PTFE Clamp Dimensions] */ 
-entrance_diameter = 5;
+
+entrance_diameter = 4.2;
 
 x_clamp = 10;
 y_clamp = 6; 
@@ -71,6 +82,8 @@ dx_squeeze_clamp = 1.5; // [0:0.25:3]
 barb_spacing = 2;
 barb_bite = 0.5;
 
+/* [PTFE Connector Dimensions] */ 
+
 x_connector = 10;
 y_connector = 6;
 z_connector = 6;
@@ -79,14 +92,15 @@ x_slot_connector = 0;
 // Tune if necessary to hold connector in keyhole
 dx_squeeze_connector = 1.5;  
 
-core_length = 0.1;
+/* [PTFE Tubing Clip Dimensions] */
+
 clip_wall = 3;
 z_clip = 6;
 dz_clip_base = 1.75;
 
 module end_of_customization() { }
 
-
+// PTFE bowden filament example
 clamp_dimensions = qtcc_dimensions(
     x_clamp, y_clamp, z_clamp, 
     x_clearance, y_clearance, z_clearance, 
@@ -102,45 +116,67 @@ connector_dimensions = qtcc_dimensions(
 if (show_ptfe_tubing_collet) {
     rotation = [0, 0, 0];
     translation = show_assembled ? [0, 0, dz_clip_base] : [20, 0, 0]; 
-    translate(translation) rotate(rotation) qtcc_ptfe_tubing_collet();
+    translate(translation) rotate(rotation) qtcc_ptfe_tubing_collet(is_filament_entrance=is_filament_entrance);
 }
 
-if (show_qtcc_ptfe_tubing_clip) {
+if (show_ptfe_tubing_clip) {
      translate([0, 0, 0]) rotate([0, 0, az_clip])  qtcc_ptfe_tubing_clip();
 }
 
 if (show_sample_key_hole) {
-    
-  translate([-30, 0, 0])  qtcc_ptfe_tubing_sample_key_hole();
+  translate([-30, 0, 0])  qtcc_ptfe_tubing_sample_key_hole(is_filament_entrance = is_filament_entrance);
 }
 
-module qtcc_ptfe_tubing_collet() {
+if (show_filament_path) {
+    translate([-60, 0, 0])  qtcc_ptfe_tubing_filament_path(is_clearance = true, is_entrance=is_filament_entrance);
+}
+
+module qtcc_ptfe_tubing_collet(is_filament_entrance, as_clearance=false) {
 
     barb_count = ceil(z_clamp/barb_spacing);
-    module tubing_clearance() {
+    module barbed_tubing_clearance() {
         id = od_ptfe_tubing+2*tube_clearance;
         for (i = [0: barb_count-1]) {
             translate([0, 0, i*barb_spacing]) 
                 can(d=id, taper=id-barb_bite,  h = barb_spacing, center=ABOVE);
         }
     }
-    module entrance() {
-        translate([0, 0, z_clamp + core_length]) 
-            can(d=d_filament+ 2*filament_clearance, taper=entrance_diameter,  h = z_connector + 0.5, center=ABOVE);
+    
+    module cavity() {
+        barbed_tubing_clearance();
+        translate([0, 0, z_clamp + core_length])  
+            qtcc_ptfe_tubing_filament_path(is_clearance = true, is_entrance = is_filament_entrance);
+        
     }
-    module filament() {
-        can(d=d_filament+ 2*filament_clearance, h = a_lot);
-    }
-    render(convexity=10) difference() {
+    if (as_clearance) {
         quarter_turn_clamping_connector_key(core_length,  clamp_dimensions, connector_dimensions);
-        tubing_clearance();
-        filament();
-        entrance();
+        cavity();        
+    } else {
+
+        render(convexity=10) difference() {
+            quarter_turn_clamping_connector_key(core_length,  clamp_dimensions, connector_dimensions);
+            cavity();
+        }
     }
 }
 
+module qtcc_ptfe_tubing_filament_path(is_clearance, is_entrance, multiplier = 5) {
+    module filament_exit() {
+        can(d=d_filament+ 2*filament_clearance, h = z_connector*multiplier, center = ABOVE);
+    }    
+    module filament_entrance() {
+            can(d=d_filament + 2*filament_clearance, taper=entrance_diameter*multiplier,  h = z_connector*multiplier,  center=ABOVE);
+            
+    }    
+    if (is_entrance) {
+        filament_entrance();
+    } else {
+        filament_exit(); 
+    }
+    can(d=d_filament + 2*filament_clearance, h = z_clamp*multiplier, center=BELOW);
+}
 
-        
+ 
 module qtcc_ptfe_tubing_clip() { 
     key_extent = gtcc_extent(clamp_dimensions);   
     s_clip = 2 * ceil((key_extent.x + 2 * clip_wall)/2);
@@ -151,7 +187,7 @@ module qtcc_ptfe_tubing_clip() {
     module clamping_keyhole() {
         translate([0, 0, key_extent.z + dz_clip_base]) 
             rotate([180, 0, 0]) 
-                quarter_turn_clamping_connector_keyhole(clamp_dimensions);        
+                quarter_turn_clamping_connector_keyhole(clamp_dimensions, print_from_key_opening=false);        
     }
     module tubing() {
         can(d=od_ptfe_tubing + 2 * loose_tube_clearance, h = z_clamp + core_length/2, center=ABOVE);
@@ -166,37 +202,45 @@ module qtcc_ptfe_tubing_clip() {
     }
 } 
 
-module qtcc_ptfe_tubing_connector_keyhole() {
-    quarter_turn_clamping_connector_keyhole(connector_dimensions);
+module qtcc_ptfe_tubing_connector_keyhole(is_filament_entrance, print_from_key_opening) {
+     bridging_diameter = is_filament_entrance ? entrance_diameter: d_filament+ 2*filament_clearance;
+    echo("bridging_diameter", bridging_diameter);
+    quarter_turn_clamping_connector_keyhole(connector_dimensions, print_from_key_opening, bridging_diameter=bridging_diameter);
+    // Adjustment of opening so there is no edge to catch at top of collet for entrances, and outlet doesn't interfere with bridging. 
+   dz_path =  print_from_key_opening && is_filament_entrance ? 5 : 0;
+    translate([0, 0, dz_path]) qtcc_ptfe_tubing_filament_path(is_clearance = true, is_entrance = is_filament_entrance);
 }
 
 
-module qtcc_ptfe_tubing_sample_key_hole() {
-    key_extent = gtcc_extent(connector_dimensions); 
-    module entrance() {
-        can(d=entrance_diameter, h=a_lot);
-    }
+module qtcc_ptfe_tubing_sample_key_hole(is_filament_entrance) {
+    //key_extent = gtcc_extent(connector_dimensions); 
     
     module base() {
-        block([20, 20, z_connector + 2], center=ABOVE);  
+        block([20, 20, z_connector + 4], center=ABOVE);  
     }
     render(convexity=10) difference() {
-        base();
-        entrance();        
-        qtcc_ptfe_tubing_connector_keyhole();
+        base();  
+        qtcc_ptfe_tubing_connector_keyhole(is_filament_entrance, print_from_key_opening=true);
     }
 }
     
-  
+ // Start of general implementation
 
-function qtcc_dimensions(x, y, z, x_clearance, y_clearance, z_clearance, x_neck, x_slot, dx_squeeze, aspect_ratio_tuning) = [
+function qtcc_dimensions(x, y, z, x_clearance, y_clearance, z_clearance, x_neck, x_slot, dx_squeeze, aspect_ratio_tuning) =
+    let(
+        s_open = x + 2*x_clearance,
+        s_closed = x - dx_squeeze,
+        key_width = y,
+        cam = qtcc_calculate_cam_dimensions(s_open, s_closed, key_width, aspect_ratio_tuning)
+    ) 
+    [
     [x, y, z], 
     [x_clearance, y_clearance, z_clearance],
     x_neck, 
     x_slot, 
     dx_squeeze,
     aspect_ratio_tuning,
-    
+    cam,
 ];
 
 function gtcc_extent(dimensions) = is_undef(dimensions) ? [0, 0, 0] : dimensions[0];
@@ -205,18 +249,21 @@ function gtcc_x_neck(dimensions) = is_undef(dimensions) ? 0 : dimensions[2];
 function gtcc_x_slot(dimensions)  = is_undef(dimensions) ? 0 : dimensions[3];
 function gtcc_dx_sqeeze(dimensions)  = is_undef(dimensions) ? 0 : dimensions[4];
 function gtcc_aspect_ratio_tuning(dimensions)  = is_undef(dimensions) ? 0 : dimensions[5];
+function gtcc_cam(dimensions)  = is_undef(dimensions) ? [0, 0] : dimensions[6];
 
-function qtcc_calculate_cam_dimensions(s_open, s_closed, key_width, z_cam, aspect_ratio_tuning) = 
+function qtcc_calculate_cam_dimensions (s_open, s_closed, key_width, aspect_ratio_tuning) = 
   let(
     radius_open = sqrt(s_open * s_open + key_width * key_width),
     aspect_ratio = aspect_ratio_tuning * s_closed / s_open,
     iar = 1/aspect_ratio,
     x_0 = s_open / 2,
     y_0 = key_width / 2,
+    // Major axis half length:
     x_cam = sqrt(x_0^2  + (iar^2*y_0^2)),
+    // Minor axis half length: 
     y_cam = x_cam*aspect_ratio
   )
-  [x_cam, y_cam, z_cam];
+  [x_cam, y_cam];
 
 
 module quarter_turn_clamping_connector_key(core_length,  dimensions_1, dimensions_2) {
@@ -259,34 +306,37 @@ module quarter_turn_clamping_connector_key(core_length,  dimensions_1, dimension
 }
 
 
-module quarter_turn_clamping_connector_keyhole(dimensions) {
+module quarter_turn_clamping_connector_keyhole(dimensions, print_from_key_opening = false, bridging_diameter=0) {
     extent = gtcc_extent(dimensions);
     clearances = gtcc_clearances(dimensions);
     x_neck =  gtcc_x_neck(dimensions);
     dx_squeeze = gtcc_dx_sqeeze(dimensions);
     aspect_ratio_tuning = gtcc_aspect_ratio_tuning(dimensions);
-
-    module cam_shape(cam) {
-        scale([cam.x, cam.y, cam.z]) {
+    cam = gtcc_cam(dimensions);
+    
+    module cam_shape(cam, z) {
+        scale([cam.x, cam.y, z]) {
             cylinder(h = 1, r = 1, center=true, $fn=30);
         }
     }
     module key_insertion_clearance() {
-        z_bridging = 0.5;
-        translate([0, 0, -clearances.x]) block(extent + 2 * clearances + [0, 0, z_bridging], center=ABOVE);
-        translate([0, 0, extent.z+clearances.z + z_bridging]) block([extent.y, extent.y, z_bridging], center=ABOVE);
+        // Opening for key
+        translate([0, 0, -clearances.x]) block(extent + 2 * clearances,  center=ABOVE);
+        if (print_from_key_opening) {
+            // Add bridging for opening
+            s_opening = bridging_diameter == 0 ? extent.y : bridging_diameter;
+            layer = 0.5; 
+            first_bridging_cavity = [s_opening, 2*cam.y, 2*layer];
+            translate([0, 0, extent.z+clearances.z]) block(first_bridging_cavity, center=ABOVE);
+            second_bridging_cavity = [s_opening, s_opening, 2*layer];
+            translate([0, 0, extent.z+clearances.z + layer]) block(second_bridging_cavity, center=ABOVE);
+        }
     }
     module base_profile() {
         
-        s_open = extent.x + 2*clearances.x;
-        s_closed = extent.x - dx_squeeze;
-        key_width = extent.y; 
-        z_cam = clearances.z;
-        echo("s_open", s_open);
-        echo("s_closed", s_closed);
-        cam = qtcc_calculate_cam_dimensions(s_open, s_closed, key_width, z_cam, aspect_ratio_tuning);
-        //cam = calculate_cam_dimensions(s_open, s_closed, key_width, z_cam, aspect_ratio_tuning);
-        translate([0, 0, extent.z]) cam_shape(cam);
+        
+        
+        translate([0, 0, extent.z]) cam_shape(cam, clearances.z);
     }
     module neck_profile() {
         d_neck = sqrt((x_neck + 2 * clearances.x)^2 + (extent.y + 2 * clearances.y)^2);
@@ -314,8 +364,6 @@ module quarter_turn_clamping_connector_keyhole(dimensions) {
         cavity();
         quarter_turn_stops();
     }
-    
-    
-    
+   
 }
 
