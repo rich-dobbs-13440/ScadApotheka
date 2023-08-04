@@ -33,6 +33,7 @@ alpha_back_plate = 1; // [1:Solid, 0.25:Ghostly, 0:Invisible]
 recess_mounting_screws = true;
 right_handed_top_plate = true;
 roller_arm_length = 20; //[18:short, 20: long]
+trim_support = true;
 
 /* [Design parameters] */
 dx_connection = 8;
@@ -72,7 +73,12 @@ if (show_top_clamp) {
         switch_depressed = switch_depressed);
 }
 
-module roller_limit_switch_mounting_screws(as_clearance=false, adjustment_slot=false, for_ferrules=false, base_plate_thickness = 0, recess = false) {
+module roller_limit_switch_mounting_screws(
+        as_clearance=false, 
+        adjustment_slot=false, 
+        for_ferrules=false, 
+        base_plate_thickness = 0, 
+        recess = false) {
     echo("base_plate_thickness", base_plate_thickness);
     limit_switch =  rls_base(); 
     nut_thickness = 2;
@@ -207,7 +213,8 @@ module nsrsh_top_clamp(
         recess_mounting_screws = false,
         use_dupont_connectors = true, 
         roller_arm_length = 20,
-        switch_depressed = false) {
+        switch_depressed = false, 
+        trim_base = false) {
             
    limit_switch =  rls_base();  
    prong = rls_prong();
@@ -275,6 +282,9 @@ module nsrsh_top_clamp(
             limit_switch.y/2 + thickness, 
             limit_switch.z/2 + prong.z
         ];
+        module terminal_probe_spots() {
+            translate([0, 0, 8.5]) rod(d= 2, l=a_lot);
+        }
         render(convexity=10) difference() {
             union() {
                 translate(back_plate_translation()) block(back_plate(thickness), center=ABOVE+RIGHT);
@@ -289,6 +299,13 @@ module nsrsh_top_clamp(
             connection_screws(as_clearance = true);
             if (use_dupont_connectors) {
                 dupont_connectors(as_clearance = true);
+                 terminal_probe_spots();
+            }
+            if (trim_support) {
+                // Remove parts of the base and holder that may not be needed for printing.  
+                // - area behind Dupont connectors
+                translate([0, 0, 22]) rotate([-45, 0, 0]) block([100, 100, 100], center =ABOVE);
+                translate([0, 0, -7]) rotate([45, 0, 0]) block([100, 100, 100], center =BELOW);
             }
         }      
     }
