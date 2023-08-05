@@ -23,6 +23,8 @@ use <ScadApotheka/dupont_pins.scad>
 
 a_lot = 100 + 0;
 /* [Output Control] */
+ mode = 3; // [3: "Assembly", 4: "Printing"]
+ 
 show_vitamins = true;
 switch_depressed = false;
 show_terminal_end_clamp = true;
@@ -30,10 +32,16 @@ show_adjuster = true;
 show_adjustable_mount = true;
 show_ferrule_clamp = false;
 
+adjuster  = 1; // [1:Solid, 0.25:Ghostly, 0:Invisible]
+adjustable_mount  = 1; // [1:Solid, 0.25:Ghostly, 0:Invisible]
 alpha_ferrule_clamp = 1; // [1:Solid, 0.25:Ghostly, 0:Invisible]
 alpha_terminal_end_clamp = 1; // [1:Solid, 0.25:Ghostly, 0:Invisible]
 
-dz_mount = -16;
+/* [Printing] */
+print_one_part = false;
+part_to_print = "barrel"; // [barrel]
+
+
 
 /* [Customization] */
 recess_mounting_screws = true;
@@ -42,8 +50,9 @@ roller_arm_length = 20; //[18:short, 20: long]
 trim_support = true;
 adjustment_rails = true;
 adjuster_screw_length = 20;
+dz_adjustable_mount = 10; // [0: 20]
 
-
+dz_mount = mode_is_printing(mode) ? -50: dz_adjustable_mount;
 
 /* [Design parameters] */
 dx_connection = 8;
@@ -61,9 +70,23 @@ h_nut_block = 6;
 dz_clamp_screws = 8.5;
 
 /* [Adjuster Design parameters] */
-adjuster_plate_thickness = 2;
+adjuster_plate_thickness = 4;
+adjuster_slide_length = 30; // [10:40]
+adjustable_mount_slide_length = 12;
 
 module end_of_customization() {}
+
+function show(variable, name) = 
+    (print_one_part && mode_is_printing(mode)) ? name == part_to_print :
+    variable;
+
+visualization_adjuster  =        
+    visualize_info(
+        "Adjuster", PART_2, show(adjuster, "adjuster") , layout_from_mode(mode)); 
+
+visualization_adjustable_mount = 
+    visualize_info(
+        "Adjustable Mount ", PART_3, show(adjustable_mount , "adjustable_mount ") , layout_from_mode(mode)); 
 
 function mounting_plate(thickness) = [rls_base().x, thickness, rls_base().z + rls_prong().z + 0.1 ];
 function mounting_plate_translation() = [0, rls_base().y/2, -4];
@@ -89,12 +112,15 @@ if (show_terminal_end_clamp) {
 }
 
 if (show_adjuster) {
-    nsrsh_adjuster(show_vitamins=show_vitamins, screw_length=adjuster_screw_length);
+    nsrsh_adjuster(show_vitamins=show_vitamins, screw_length=adjuster_screw_length, slide_length=adjuster_slide_length);
 }
 
 
 if (show_adjustable_mount) {
-    nsrsh_adjustable_mount(show_vitamins=show_vitamins, screw_length=adjuster_screw_length);
+    nsrsh_adjustable_mount(
+        show_vitamins=show_vitamins, 
+        screw_length=adjuster_screw_length,
+        slide_length = adjustable_mount_slide_length);
 }
 
 
@@ -106,7 +132,7 @@ module nsrsh_adjustment_screw(
         as_swivel_vitamins = false,
         screw_length=20) {
     screw_name = str("M2x", screw_length);
-    dy = -4;
+    dy = -7;
     dz_nutcut = -2;
     nut_block = [8, 8, 6];
     swivel_block = [8., 8.8, 3];
@@ -132,11 +158,10 @@ module nsrsh_adjustment_screw(
                 ball(as_clearance = false);      
                  printing_support();         
             }
-            translate([0, 0, -swivel_block.z/2]) can(d=7, h=a_lot, center=BELOW);
+            translate([0, 0, -swivel_block.z/2]) can(d=8, h=a_lot, center=BELOW);
             block(break_loose_slot);
         } else {
             block(swivel_block);
-            
          }
     }
     
@@ -172,11 +197,15 @@ module nsrsh_adjustment_screw(
 
 
     
-module nsrsh_adjustable_mount(show_vitamins, screw_length = 20, as_slide_clearance=false, slide_clearance = 0.2) {
+module nsrsh_adjustable_mount(
+        show_vitamins, screw_length = 20, 
+        as_slide_clearance=false, 
+        slide_clearance = 0.2, 
+        slide_length = 10) {
     limit_switch =  rls_base(); 
-    z_slide = screw_length - 4;
+    z_slide = slide_length;
     s_slide = 9;
-    //mounting_plate = [limit_switch.x, adjuster_plate_thickness, limit_switch.z/2];
+
     
     module slide(as_clearance = false) {
         s = as_clearance ? s_slide + 2*slide_clearance: s_slide;
@@ -190,7 +219,7 @@ module nsrsh_adjustable_mount(show_vitamins, screw_length = 20, as_slide_clearan
         }
     }
     module shape() {
-        difference() {
+        render(convexity = 20) difference() {
             union() {
                 nsrsh_adjustment_screw(as_swivel = true);
                 translate([0, 0, +1.4]) slide(as_clearance = false);
@@ -205,34 +234,31 @@ module nsrsh_adjustable_mount(show_vitamins, screw_length = 20, as_slide_clearan
             if (show_vitamins) {
                 nsrsh_adjustment_screw(as_swivel_vitamins = true, screw_length=screw_length);
             }
-            shape();
+            visualize(visualization_adjustable_mount) {
+                shape();
+            }
         }
     }
 }
 
 
-
-
-//nsrsh_adjustment_screw(as_nut_block = true); 
-//    nsrsh_adjustment_screw(as_clearance = true);
-
-module nsrsh_adjuster(show_vitamins=true, screw_length=20) {
+module nsrsh_adjuster(show_vitamins=true, screw_length=20, slide_length=10) {
     limit_switch = rls_base();
     module mount_and_rails(dz_slide, slide_length) {
 
-        mounting_plate = [limit_switch.x - 4, adjuster_plate_thickness, limit_switch.z/2];
+        mounting_plate = [limit_switch.x, adjuster_plate_thickness, limit_switch.z/2];
         slide_body =  [limit_switch.x, 4, slide_length];
-        block(mounting_plate,  center= ABOVE + LEFT);        
+        translate([0, 0, 1])  block(mounting_plate,  center= ABOVE + LEFT);        
         render(convexity=10) difference() {
-            block(slide_body, center = BELOW + LEFT);
+            translate([0, 0, 1])  block(slide_body, center = BELOW + LEFT);
             translate([0, 0, dz_slide]) nsrsh_adjustable_mount(as_slide_clearance=true);
         }
 
     }
     module shape() {
-        difference() {
+        render(convexity=10) difference() {
              union() {
-                mount_and_rails(dz_slide=-6, slide_length =screw_length);
+                mount_and_rails(dz_slide=-6, slide_length =slide_length);
                 nsrsh_adjustment_screw(as_nut_block = true); 
             }
            roller_limit_switch_mounting_screws(as_clearance = true);
@@ -243,7 +269,9 @@ module nsrsh_adjuster(show_vitamins=true, screw_length=20) {
         if (show_vitamins) {
             nsrsh_adjustment_screw(as_clearance = false, screw_length=screw_length);
         }
-        shape();
+        visualize(visualization_adjuster) {
+            shape();
+        }
     }
 }
 
