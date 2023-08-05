@@ -174,11 +174,12 @@ module quarter_turn_clamping_connector_keyhole(dimensions, print_from_key_openin
         hull() {
            base_profile();
            neck_profile();
-        }        
+        } 
+        children();
     }
     module cavity() {
        key_insertion_clearance();
-        rotation_clearance();
+        rotation_clearance() children();
     }
     module quarter_turn_stops() {
         stop_offset = extent.y/2 + clearances.y;
@@ -187,9 +188,8 @@ module quarter_turn_clamping_connector_keyhole(dimensions, print_from_key_openin
         translate([stop_offset , -stop_offset, -0.5])  
             block(extent + [0, 0, 1], center=ABOVE+FRONT+LEFT);
     }
-  
     render(convexity = 10) difference() {
-        cavity();
+        cavity() children();
         quarter_turn_stops();
     }
    

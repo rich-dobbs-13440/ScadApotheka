@@ -246,7 +246,10 @@ module flute_keyhole(is_filament_entrance, print_from_key_opening) {
     connector = flute_connector_dimensions();
      bridging_diameter = is_filament_entrance ? entrance_diameter: d_filament+ 2*filament_clearance;
     echo("bridging_diameter", bridging_diameter);
-    quarter_turn_clamping_connector_keyhole(connector, print_from_key_opening, bridging_diameter=bridging_diameter);
+    quarter_turn_clamping_connector_keyhole(connector, print_from_key_opening, bridging_diameter=bridging_diameter) {
+        // Need to pass chidren through this module
+        children();
+    }
     // Adjustment of opening so there is no edge to catch at top of collet for entrances, and outlet doesn't interfere with bridging. 
    dz_path =  print_from_key_opening && is_filament_entrance ? 5 : 0;
     translate([0, 0, dz_path]) flute_filament_path(is_entrance = is_filament_entrance);
