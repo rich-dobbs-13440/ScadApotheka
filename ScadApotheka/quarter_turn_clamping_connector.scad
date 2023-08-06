@@ -54,28 +54,36 @@ module end_of_customization() { }
     
  // Start of general implementation
 
-function qtcc_dimensions(x, y, z, x_clearance, y_clearance, z_clearance, x_neck, x_slot, dx_squeeze, aspect_ratio_tuning=1) =
+function quarter_turn_connector(
+        extent,
+        clearances,
+        slot,
+        neck,
+        squeeze,
+        aspect_ratio_tuning=1) =
     let(
-        s_open = x + 2*x_clearance,
-        s_closed = x - dx_squeeze,
-        key_width = y,
+        slot_with_defaults = [slot.x, slot.y > 0 ? slot.y : a_lot, slot.z > 0 ? slot.z : a_lot],
+        neck_with_defaults = [neck.x, neck.y > 0 ? neck.y : extent.y, neck.z > 0 ? neck.z : 0.1], 
+        s_open = extent.x + 2*clearances.x,
+        s_closed = extent.x - squeeze.x,
+        key_width = extent.y,
         cam = qtcc_calculate_cam_dimensions(s_open, s_closed, key_width, aspect_ratio_tuning)
     ) 
     [
-    [x, y, z], 
-    [x_clearance, y_clearance, z_clearance],
-    x_neck, 
-    x_slot, 
-    dx_squeeze,
-    aspect_ratio_tuning,
-    cam,
-];
+        extent,
+        clearances,
+        slot_with_defaults,
+        neck_with_defaults,
+        squeeze,
+        aspect_ratio_tuning,
+        cam
+    ];
 
 function gtcc_extent(dimensions) = is_undef(dimensions) ? [0, 0, 0] : dimensions[0];
 function gtcc_clearances(dimensions) = is_undef(dimensions) ? [0, 0, 0] : dimensions[1];
-function gtcc_x_neck(dimensions) = is_undef(dimensions) ? 0 : dimensions[2];
-function gtcc_x_slot(dimensions)  = is_undef(dimensions) ? 0 : dimensions[3];
-function gtcc_dx_sqeeze(dimensions)  = is_undef(dimensions) ? 0 : dimensions[4];
+function gtcc_slot(dimensions)  = is_undef(dimensions) ? 0 : dimensions[2];
+function gtcc_neck(dimensions) = is_undef(dimensions) ? 0 : dimensions[3];
+function gtcc_sqeeze(dimensions)  = is_undef(dimensions) ? 0 : dimensions[4];
 function gtcc_aspect_ratio_tuning(dimensions)  = is_undef(dimensions) ? 0 : dimensions[5];
 function gtcc_cam(dimensions)  = is_undef(dimensions) ? [0, 0] : dimensions[6];
 
@@ -106,30 +114,30 @@ module quarter_turn_clamping_connector_key(core_length,  dimensions_1, dimension
     assert(is_list(dimensions_1));
     extent_1 = gtcc_extent(dimensions_1);
     extent_2 = gtcc_extent(dimensions_2);
-    x_neck_1 = gtcc_x_neck(dimensions_1);
-    x_neck_2 =  gtcc_x_neck(dimensions_2);    
+    neck_1 = gtcc_neck(dimensions_1);
+    neck_2 = gtcc_neck(dimensions_2);
 
     // Origin is at center of first dimension pyramids
     module key_shape(dimensions) {
         extent = gtcc_extent(dimensions);
-        x_neck = gtcc_x_neck(dimensions);
-        x_slot  = gtcc_x_slot(dimensions); 
+        neck = gtcc_neck(dimensions);
+        slot  = gtcc_slot(dimensions); 
 
         base_profile = [extent.x, extent.y, 0.1];
-        neck_profile = [x_neck, extent.y, 0.1];
         render(convexity = 10) difference() {
             hull() {
                 block(base_profile, center=ABOVE);
-                translate([0, 0, extent.z]) block(neck_profile, center=BELOW);
+                translate([0, 0, extent.z]) block(neck, center=BELOW);
             }
-            if (x_slot > 0) {
-                block([x_slot, a_lot, a_lot]);
+            if (slot.x > 0) {
+                // TODO: Implement user control of slot length
+                block(slot, center=ABOVE);
             }
         }
     }
     
     module core_shape() {
-        core = [max(x_neck_1, x_neck_2), max(extent_1.y, extent_2.y), core_length];
+        core = [max(neck_1.x, neck_2.x), max(extent_1.y, extent_2.y), core_length];
         translate([0, 0, extent_1.z]) block(core, center=ABOVE);
     }
     
@@ -144,8 +152,8 @@ module quarter_turn_clamping_connector_key(core_length,  dimensions_1, dimension
 module quarter_turn_clamping_connector_keyhole(dimensions, print_from_key_opening = false, bridging_diameter=0) {
     extent = gtcc_extent(dimensions);
     clearances = gtcc_clearances(dimensions);
-    x_neck =  gtcc_x_neck(dimensions);
-    dx_squeeze = gtcc_dx_sqeeze(dimensions);
+    neck =  gtcc_neck(dimensions);
+    dx_squeeze = gtcc_sqeeze(dimensions).x;
     aspect_ratio_tuning = gtcc_aspect_ratio_tuning(dimensions);
     cam = gtcc_cam(dimensions);
     
@@ -167,8 +175,8 @@ module quarter_turn_clamping_connector_keyhole(dimensions, print_from_key_openin
         translate([0, 0, extent.z]) gtcc_cam_shape(cam, clearances.z);
     }
     module neck_profile() {
-        d_neck = sqrt((x_neck + 2 * clearances.x)^2 + (extent.y + 2 * clearances.y)^2);
-         can(d = d_neck, h = clearances.z, center=BELOW);
+        d_neck = sqrt((neck.x + 2 * clearances.x)^2 + (extent.y + 2 * clearances.y)^2);
+        can(d = d_neck, h = clearances.z, center=BELOW);
     }
     module rotation_clearance() {
         hull() {
@@ -192,6 +200,5 @@ module quarter_turn_clamping_connector_keyhole(dimensions, print_from_key_openin
         cavity() children();
         quarter_turn_stops();
     }
-   
 }
 

@@ -60,10 +60,10 @@ d_filament = 1.75 + 0;
 /* [Example] */
 show_assembled = false;
 
-show_ptfe_tubing_collet = true;
+show_collet = true;
+show_collet_nut = true;
+show_union = true;
 show_sample_key_hole = true;
-show_ptfe_tubing_clip = true;
-
 show_filament_path = true;
 is_filament_entrance = true;
 
@@ -98,6 +98,7 @@ y_clamp = 6;
 z_clamp = 8;
 x_neck_clamp = 6;
 x_slot_clamp = 1;
+z_slot_clamp = 5;
 // Tune if necessary to hold tube
 dx_squeeze_clamp = 1.5; // [0:0.25:3]  
 barb_spacing = 2;
@@ -107,17 +108,24 @@ barb_bite = 0.5;
 
 x_connector = 10;
 y_connector = 6;
-z_connector = 6;
+z_connector = 8;
 x_neck_connector = 6;
-x_slot_connector = 0;
+x_slot_connector = 0.5;
+z_slot_connector = 3;
+
 // Tune if necessary to hold connector in keyhole
 dx_squeeze_connector = 1.5;  
 
-/* [PTFE Tubing Clip Dimensions] */
+/* [PTFE Tubing Nut Dimensions] */
 
-clip_wall = 3;
-z_clip = 6;
-dz_clip_base = 1.75;
+nut_wall = 1;
+h_nut = 6;
+h_nut_base = 1.;
+nut_sides = 4; //[4, 6]
+
+/* [Dimensions] */
+h_union_core = 2;
+union_sides = 4; //[4, 6]
 
 module end_of_customization() { }
 
@@ -134,37 +142,53 @@ module flute_sample_key_hole(is_filament_entrance) {
     }
 }
 
-if (show_ptfe_tubing_collet) {
+if (show_collet) {
     rotation = [0, 0, 0];
     translation = show_assembled ? [0, 0, dz_clip_base] : [20, 0, 0]; 
     translate(translation) rotate(rotation) flute_collet(is_filament_entrance=is_filament_entrance);
 }
 
-if (show_ptfe_tubing_clip) {
-     translate([0, 0, 0]) rotate([0, 0, az_clip])  flute_collet_nut();
+if (show_collet_nut) {
+     translate([0, 0, 0]) rotate([0, 0, az_clip])  flute_collet_nut(sides = 4);
+    translate([0, 20, 0]) rotate([0, 0, az_clip])  flute_collet_nut(sides = 6);
+}
+
+if (show_union) {
+    translate([0, 0, 0]) flute_union(sides=union_sides, h_union_core = h_union_core);
 }
 
 if (show_sample_key_hole) {
   translate([-30, 0, 0])  flute_sample_key_hole(is_filament_entrance = is_filament_entrance);
 }
 
+
+
 if (show_filament_path) {
     translate([-60, 0, 0])  flute_filament_path(is_entrance=is_filament_entrance);
 }
 
 
-function flute_clamp_dimensions() = qtcc_dimensions(
-    x_clamp, y_clamp, z_clamp, 
-    x_clearance, y_clearance, z_clearance, 
-    x_neck_clamp, x_slot_clamp, 
-    dx_squeeze_clamp, aspect_ratio_tuning);
 
 
-function flute_connector_dimensions() = qtcc_dimensions(
-    x_connector, y_connector, z_connector, 
-    x_clearance, y_clearance, z_clearance, 
-    x_neck_connector, x_slot_connector,
-    dx_squeeze_connector, aspect_ratio_tuning);  
+
+function flute_clamp_connector() = 
+    quarter_turn_connector(
+            [x_clamp, y_clamp, z_clamp],
+            [x_clearance, y_clearance, z_clearance],
+            [x_slot_clamp, -1, z_slot_clamp],
+            [x_neck_clamp, -1, -1],
+            [dx_squeeze_clamp, -1, -1],
+            aspect_ratio_tuning);
+
+
+function flute_connector() = 
+    quarter_turn_connector(
+        [x_connector, y_connector, z_connector], 
+        [x_clearance, y_clearance, z_clearance], 
+        [x_slot_connector, -1, z_slot_connector],
+        [x_neck_connector, -1, -1],
+        [dx_squeeze_connector, -1, -1],
+        aspect_ratio_tuning);  
 
 module flute_barbed_tubing_clearance() {
     barb_count = ceil(z_clamp/barb_spacing);
@@ -176,8 +200,8 @@ module flute_barbed_tubing_clearance() {
 }
 
 module flute_collet(is_filament_entrance=true, as_clearance=false) {
-    clamp = flute_clamp_dimensions();
-    connector = flute_connector_dimensions();
+    clamp = flute_clamp_connector();
+    connector = flute_connector();
     
     module cavity() {
         flute_barbed_tubing_clearance();
@@ -215,17 +239,34 @@ module flute_filament_path(is_entrance=true, multiplier = 5, include_below = tru
     }
 }
 
+
+module nut_blank(sides, h_nut, nut_wall, connector) {
+    az = 180/sides;
+    extent = gtcc_extent(connector);  
+    r = sqrt(extent.x^2 + extent.y^2)/2;
+    s_nut = 2 * ceil(r + nut_wall);
+    echo("s_nut", s_nut);   
+    d_nut = s_nut/cos(az);
+    echo("d_nut", d_nut);
+    rotate([0, 0, az]) can(d =d_nut, h = h_nut, $fn=sides, center=ABOVE);
+}  
+    
  
-module flute_collet_nut() { 
-    clamp = flute_clamp_dimensions();
+module flute_collet_nut(sides = 6) { 
+    clamp = flute_clamp_connector();
     key_extent = gtcc_extent(clamp);   
-    s_clip = 2 * ceil((key_extent.x + 2 * clip_wall)/2);
-    echo("s_clip", s_clip);
-    module blank() {
-        block([s_clip, s_clip, z_clip], center=ABOVE);
-    }
+//    //cam = gtcc_cam(clamp);   
+//    r = sqrt(key_extent.x^2 + key_extent.y^2)/2;
+//    s_nut = 2 * ceil(r + nut_wall);
+//    echo("s_nut", s_nut);
+//    f = 1/cos(180/sides);      
+//    d_nut = s_nut/cos(180/sides);
+    //echo("s_nut", s_nut);
+//    module blank() {
+//        can(d =d_nut, h = h_nut, $fn=sides, center=ABOVE);
+//    }
     module clamping_keyhole() {
-        translate([0, 0, key_extent.z + dz_clip_base]) 
+        translate([0, 0, key_extent.z + h_nut_base]) 
             rotate([180, 0, 0]) 
                 quarter_turn_clamping_connector_keyhole(clamp, print_from_key_opening=false);        
     }
@@ -234,7 +275,7 @@ module flute_collet_nut() {
     }    
     color(PART_20, alpha = alpha_clip) {
         render(convexity=10) difference() {
-            blank();
+            nut_blank(sides, h_nut, nut_wall, clamp);
             clamping_keyhole();
             tubing();
             translate([0, 0, dz_crossection]) plane_clearance(BELOW);
@@ -243,7 +284,7 @@ module flute_collet_nut() {
 } 
 
 module flute_keyhole(is_filament_entrance, print_from_key_opening) {
-    connector = flute_connector_dimensions();
+    connector = flute_connector();
      bridging_diameter = is_filament_entrance ? entrance_diameter: d_filament+ 2*filament_clearance;
     echo("bridging_diameter", bridging_diameter);
     quarter_turn_clamping_connector_keyhole(connector, print_from_key_opening, bridging_diameter=bridging_diameter) {
@@ -253,6 +294,18 @@ module flute_keyhole(is_filament_entrance, print_from_key_opening) {
     // Adjustment of opening so there is no edge to catch at top of collet for entrances, and outlet doesn't interfere with bridging. 
    dz_path =  print_from_key_opening && is_filament_entrance ? 5 : 0;
     translate([0, 0, dz_path]) flute_filament_path(is_entrance = is_filament_entrance);
+}
+
+module flute_union(sides=6, h_union_core = 2) {
+    connector = flute_connector();
+    key_extent = gtcc_extent(connector);   
+    cam = gtcc_cam(connector);   
+    d_nut = 2 * ceil((cam.x + nut_wall));
+    h_union = 2 *key_extent.z + h_union_core;
+    module blank() {
+        can(d =d_nut, h = h_union, $fn=sides, center=ABOVE);
+    }
+    
 }
 
 
