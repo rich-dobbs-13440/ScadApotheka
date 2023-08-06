@@ -55,7 +55,9 @@ use <ScadApotheka/quarter_turn_clamping_connector.scad>
 
 
 od_ptfe_tubing = 4 + 0;
+id_ptfe_tubing = 2 + 0;
 d_filament = 1.75 + 0;
+a_lot = 100 + 0;
 
 /* [Example] */
 show_assembled = false;
@@ -71,7 +73,9 @@ is_filament_entrance = true;
 /* [Animation] */
 
 az_clip = 0; //[0:90]
-dz_crossection =-1; // [-1:0.1:3]
+dz_crossection =-1; // [-1:0.1:30]
+
+dy_crossection = -30; // [-30:0.5: 30]
 
 alpha_clip = 1; //[1: Solid, 0.25: Ghostly, 0:Invisible]
 
@@ -124,7 +128,7 @@ h_nut_base = 1.;
 nut_sides = 4; //[4, 6]
 
 /* [Dimensions] */
-h_union_core = 2;
+h_union_core = 4;
 union_sides = 4; //[4, 6]
 
 module end_of_customization() { }
@@ -144,27 +148,27 @@ module flute_sample_key_hole(is_filament_entrance) {
 
 if (show_collet) {
     rotation = [0, 0, 0];
-    translation = show_assembled ? [0, 0, dz_clip_base] : [20, 0, 0]; 
+    translation = show_assembled ? [0, 0, h_nut_base] : [20, 0, 0]; 
     translate(translation) rotate(rotation) flute_collet(is_filament_entrance=is_filament_entrance);
 }
 
 if (show_collet_nut) {
-     translate([0, 0, 0]) rotate([0, 0, az_clip])  flute_collet_nut(sides = 4);
-    translate([0, 20, 0]) rotate([0, 0, az_clip])  flute_collet_nut(sides = 6);
+     translate([40, 0, 0]) rotate([0, 0, az_clip])  flute_collet_nut(sides = 4);
+    translate([40, 20, 0]) rotate([0, 0, az_clip])  flute_collet_nut(sides = 6);
 }
 
 if (show_union) {
-    translate([0, 0, 0]) flute_union(sides=union_sides, h_union_core = h_union_core);
+    translate([60, 0, 0]) flute_union(sides=union_sides, h_union_core = h_union_core);
 }
 
 if (show_sample_key_hole) {
-  translate([-30, 0, 0])  flute_sample_key_hole(is_filament_entrance = is_filament_entrance);
+  translate([80, 0, 0])  flute_sample_key_hole(is_filament_entrance = is_filament_entrance);
 }
 
 
 
 if (show_filament_path) {
-    translate([-60, 0, 0])  flute_filament_path(is_entrance=is_filament_entrance);
+    translate([100, 0, 0])  flute_filament_path(is_entrance=is_filament_entrance);
 }
 
 
@@ -255,16 +259,6 @@ module nut_blank(sides, h_nut, nut_wall, connector) {
 module flute_collet_nut(sides = 6) { 
     clamp = flute_clamp_connector();
     key_extent = gtcc_extent(clamp);   
-//    //cam = gtcc_cam(clamp);   
-//    r = sqrt(key_extent.x^2 + key_extent.y^2)/2;
-//    s_nut = 2 * ceil(r + nut_wall);
-//    echo("s_nut", s_nut);
-//    f = 1/cos(180/sides);      
-//    d_nut = s_nut/cos(180/sides);
-    //echo("s_nut", s_nut);
-//    module blank() {
-//        can(d =d_nut, h = h_nut, $fn=sides, center=ABOVE);
-//    }
     module clamping_keyhole() {
         translate([0, 0, key_extent.z + h_nut_base]) 
             rotate([180, 0, 0]) 
@@ -283,6 +277,32 @@ module flute_collet_nut(sides = 6) {
     }
 } 
 
+
+module flute_union(sides=6, h_union_core = 6) {
+    connector = flute_connector();
+    key_extent = gtcc_extent(connector);   
+//    cam = gtcc_cam(connector);   
+//    d_nut = 2 * ceil((cam.x + nut_wall));
+    h_union = 2 *key_extent.z + h_union_core;
+    module filament() {
+        can(d=id_ptfe_tubing, h = a_lot);
+    }
+    color(PART_21, alpha = alpha_clip) {
+        render(convexity=10) difference() {
+            nut_blank(sides, h_union, nut_wall, connector);
+            quarter_turn_clamping_connector_keyhole(connector, print_from_key_opening=true);  
+            translate([0, 0, 2 * key_extent.z + h_union_core]) 
+                rotate([180, 0, 0]) 
+                    quarter_turn_clamping_connector_keyhole(connector, print_from_key_opening=false);    
+            filament();
+            translate([0, 0, dz_crossection]) plane_clearance(BELOW);
+            translate([0, dy_crossection, 0]) plane_clearance(LEFT);
+        }
+    }
+    
+}
+
+
 module flute_keyhole(is_filament_entrance, print_from_key_opening) {
     connector = flute_connector();
      bridging_diameter = is_filament_entrance ? entrance_diameter: d_filament+ 2*filament_clearance;
@@ -296,16 +316,5 @@ module flute_keyhole(is_filament_entrance, print_from_key_opening) {
     translate([0, 0, dz_path]) flute_filament_path(is_entrance = is_filament_entrance);
 }
 
-module flute_union(sides=6, h_union_core = 2) {
-    connector = flute_connector();
-    key_extent = gtcc_extent(connector);   
-    cam = gtcc_cam(connector);   
-    d_nut = 2 * ceil((cam.x + nut_wall));
-    h_union = 2 *key_extent.z + h_union_core;
-    module blank() {
-        can(d =d_nut, h = h_union, $fn=sides, center=ABOVE);
-    }
-    
-}
 
 
