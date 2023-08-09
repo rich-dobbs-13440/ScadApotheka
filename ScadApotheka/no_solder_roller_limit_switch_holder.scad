@@ -185,7 +185,7 @@ module nsrsh_adjustment_screw(
 
 
 
-module nsrsh_adjustable_mount_clip(as_clearance = false) {
+module nsrsh_adjustable_mount_clip(as_clearance = false, show_vitamins=false, screw_length = 20) {
     clip = [8, 8, 8];
     limit_switch =  rls_base(); 
     module dovetail() {
@@ -197,7 +197,12 @@ module nsrsh_adjustable_mount_clip(as_clearance = false) {
     if (as_clearance) {
          translate([0, -clip.y/2, -clip.z/2]) dovetail();
     } else {
+
         translate([0, -limit_switch.y/2 - clip.y/2, 0]) {
+            if (show_vitamins) {
+                //translate([0, 0, -clip.z/2]) 
+                nsrsh_adjustment_screw(as_vitamins=true);
+            }            
             render(convexity = 10) difference() {
                 dovetail();
                 translate([0, 0, -clip.z/2]) nsrsh_adjustment_screw(as_swivel_clearance=true);
@@ -208,7 +213,8 @@ module nsrsh_adjustable_mount_clip(as_clearance = false) {
 
     
 module nsrsh_adjustable_mount(
-        show_vitamins, screw_length = 20, 
+        show_vitamins = false, 
+        screw_length = 20, 
         as_slide_clearance=false, 
         slide_clearance = 0.2, 
         slide_length = 10) {
@@ -252,16 +258,17 @@ module nsrsh_adjustable_mount(
 }
 
 
-module nsrsh_adjuster(show_vitamins=true, screw_length=20, slide_length=10) {
+module nsrsh_adjuster(show_vitamins=true, screw_length=20, slide_length=10, dz_adjuster_screw = 3.5) {
     limit_switch = rls_base();
-    screw_translation = [0, dy_adjuster_screw, 1];
+    dz_slide = dz_adjuster_screw -5;
+    screw_translation = [0, dy_adjuster_screw, dz_adjuster_screw];
     module mount_and_rails(dz_slide, slide_length) {
 
         mounting_plate = [limit_switch.x, adjuster_plate_thickness, limit_switch.z/2];
         slide_body =  [limit_switch.x, 8, slide_length];
         translate([0, 0, 1])  block(mounting_plate,  center= ABOVE + LEFT);        
         render(convexity=10) difference() {
-            translate([0, 0, 1])  block(slide_body, center = BELOW + LEFT);
+            translate([0, 0, dz_adjuster_screw])  block(slide_body, center = BELOW + LEFT);
             translate([0, 0, dz_slide]) nsrsh_adjustable_mount(as_slide_clearance=true);
         }
 
@@ -269,10 +276,10 @@ module nsrsh_adjuster(show_vitamins=true, screw_length=20, slide_length=10) {
     module shape() {
         render(convexity=10) difference() {
              union() {
-                mount_and_rails(dz_slide=-4, slide_length =slide_length);
+                mount_and_rails(dz_slide=dz_slide, slide_length =slide_length);
                 translate(screw_translation) nsrsh_adjustment_screw(as_nut_block = true); 
             }
-           roller_limit_switch_mounting_screws(as_clearance = true);
+           roller_limit_switch_mounting_screws(as_clearance = true, recess_nut = true);
             translate(screw_translation) nsrsh_adjustment_screw(as_clearance = true);
         }
     }
@@ -292,7 +299,8 @@ module roller_limit_switch_mounting_screws(
         adjustment_slot=false, 
         for_ferrules=false, 
         base_plate_thickness = 0, 
-        recess = false) {
+        recess = false, 
+        recess_nut = false) {
     echo("base_plate_thickness", base_plate_thickness);
     limit_switch =  rls_base(); 
     nut_thickness = 2;
@@ -318,7 +326,12 @@ module roller_limit_switch_mounting_screws(
                         h = recess ? 10 : 0;
                         dz_extra = recess ? 0 : 25;
                         translate([0, 0, dz_screws + h + dz_extra]) hole_through("M2", h=h, $fn=12, cld=0.4);
-                        
+                    }
+                    if (recess_nut) {
+                        translate([0, 0, -2]) nutcatch_parallel(
+                            name   = "M2",  // name of screw family (i.e. M3, M4, ...)
+                            clh    =  10,  // nut height clearance
+                            clk    =  0.2);  // clearance aditional to nominal key width
                     }
                 } else {
                     color(STAINLESS_STEEL) {
