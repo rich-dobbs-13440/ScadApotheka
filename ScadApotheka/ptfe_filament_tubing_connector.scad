@@ -172,9 +172,6 @@ if (show_filament_path) {
 }
 
 
-
-
-
 function flute_clamp_connector() = 
     quarter_turn_connector(
             [x_clamp, y_clamp, z_clamp],

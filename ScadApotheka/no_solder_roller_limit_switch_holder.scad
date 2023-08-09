@@ -30,12 +30,17 @@ switch_depressed = false;
 show_terminal_end_clamp = true;
 show_adjuster = true;
 show_adjustable_mount = true;
+show_adjustable_mount_clip = true;
 show_ferrule_clamp = false;
 
 adjuster  = 1; // [1:Solid, 0.25:Ghostly, 0:Invisible]
 adjustable_mount  = 1; // [1:Solid, 0.25:Ghostly, 0:Invisible]
 alpha_ferrule_clamp = 1; // [1:Solid, 0.25:Ghostly, 0:Invisible]
 alpha_terminal_end_clamp = 1; // [1:Solid, 0.25:Ghostly, 0:Invisible]
+
+/* [Animation] */
+
+dz_adjustable_mount = -8; // [-8, -14]
 
 /* [Printing] */
 print_one_part = false;
@@ -50,7 +55,7 @@ roller_arm_length = 20; //[18:short, 20: long]
 trim_support = true;
 adjustment_rails = true;
 adjuster_screw_length = 20;
-dz_adjustable_mount = 10; // [0: 20]
+
 
 dz_mount = mode_is_printing(mode) ? -50: dz_adjustable_mount;
 
@@ -73,6 +78,8 @@ dz_clamp_screws = 8.5;
 adjuster_plate_thickness = 4;
 adjuster_slide_length = 30; // [10:40]
 adjustable_mount_slide_length = 12;
+dy_adjuster_screw = -4.5;
+h_swivel_play = 0.5;
 
 module end_of_customization() {}
 
@@ -123,78 +130,81 @@ if (show_adjustable_mount) {
         slide_length = adjustable_mount_slide_length);
 }
 
+if (show_adjustable_mount_clip) {
+    translate([0, 0, -10]) nsrsh_adjustable_mount_clip();
+}
+
+
+
 
 module nsrsh_adjustment_screw(
-        as_clearance=false, 
+        as_clearance = false, 
         as_swivel_clearance = false,
-        as_nut_block= false,  
-        as_swivel = false, 
-        as_swivel_vitamins = false,
+        as_vitamins = false,
+        as_nut_block = false,
+        z_exposure = 10,
         screw_length=20) {
     screw_name = str("M2x", screw_length);
-    dy = -7;
-    dz_nutcut = -2;
-    nut_block = [8, 8, 6];
-    swivel_block = [8., 8.8, 3];
-    break_loose_slot = [3, 1, a_lot];
-            
-    module swivel(as_clearance=false) {
-        d_swivel = 6;
-        z_sf = 0.6;
-        ball_clearance = 0.5;
-        module ball(as_clearance) {
-            d = as_clearance ? d_swivel + 2 * ball_clearance: d_swivel;
-            scale([1, 1, z_sf]) sphere(d = d, $fn = 30);
-        }
-        module printing_support() {
-            // Not apparently need
-        }
-        
-        if (as_clearance) {
-            // Tight fit for hole through.  Will be securely attaching ball to screw
-            translate([0, 0, 25]) hole_through("M2", $fn=12, h=0);    
-           difference() {
-                ball(as_clearance=true);    
-                ball(as_clearance = false);      
-                 printing_support();         
+    dz_nutcut = -1.5;
+    nut_block = [6, 6, 5]; // Thin up and down, low stress on these screws. Keep as much adjustment as possible.
+    if (as_clearance) {
+        translate([0, 0, 10]) hole_through("M2", $fn=12, cld=0.4, h=10);
+        rotate([0, 0, -90]) {  
+            translate([0, 0, dz_nutcut])  {
+                nutcatch_sidecut(
+                    name   = "M2",  // name of screw family (i.e. M3, M4, ...) 
+                    l      = 50.0,  // length of slot
+                    clk    =  0.25,  // key width clearance
+                    clh    =  0.5,  // height clearance
+                    clsl   =  0.5); 
             }
-            translate([0, 0, -swivel_block.z/2]) can(d=8, h=a_lot, center=BELOW);
-            block(break_loose_slot);
-        } else {
-            block(swivel_block);
-         }
-    }
-    
-    translate([0, dy, 0]) {  
-        rotate([0, 0, -90]) {        
-            if (as_clearance) {
-                translate([0, 0, 25]) hole_through("M2", $fn=12, cld=0.4, h=0);
-                translate([0, 0, dz_nutcut])  {
-                    nutcatch_sidecut(
-                        name   = "M2",  // name of screw family (i.e. M3, M4, ...) 
-                        l      = 50.0,  // length of slot
-                        clk    =  0.25,  // key width clearance
-                        clh    =  0.5,  // height clearance
-                        clsl   =  0.5);      
-                }
-            } else if (as_swivel_clearance) {
-                swivel(as_clearance = true); 
-            } else if (as_nut_block) {
-                block(nut_block, center=BELOW);
-            } else if (as_swivel) {
-                swivel();
-            } else if (as_swivel_vitamins) {
-            } else {
-                color(STAINLESS_STEEL) {
-                    translate([0, 0, -0.]) screw(screw_name, $fn=12);
-                    translate([0, 0, dz_nutcut-0.4]) nut("M2", $fn=12);     
-                }               
-            } 
+        }   
+    } else if (as_swivel_clearance) {  
+        hull() {
+            can(d=5, h=2* 1.6 + h_swivel_play);
+            translate([0, -5, 0]) can(d=5, h=2* 1.6 + h_swivel_play);
         }
-    }
+        hull() {
+            can(d=2, h=a_lot);
+            translate([0, -5, 0]) can(d=2, h=a_lot);
+        }        
+        
+    } else if (as_vitamins) {
+        color(STAINLESS_STEEL) {
+            translate([0, 0, dz_nutcut-0.4]) nut("M2", $fn=12); 
+            translate([0, 0, screw_length - z_exposure]) {
+                screw(screw_name, $fn=12); 
+                nut("M2", $fn=12); 
+                translate([0, 0, 1.6]) nut("M2", $fn=12);
+            }
+        }                
+    } else if (as_nut_block) {
+        block(nut_block, center=BELOW);
+    }            
 } 
 
 
+
+module nsrsh_adjustable_mount_clip(as_clearance = false) {
+    clip = [8, 8, 8];
+    limit_switch =  rls_base(); 
+    module dovetail() {
+        hull() {
+            block(clip + [-2, 0, 0], center=BELOW);
+            translate([0, 0, -clip.z]) block([clip.x, clip.y, 0.1], center = ABOVE);   
+        }             
+    }
+    if (as_clearance) {
+         translate([0, -clip.y/2, -clip.z/2]) dovetail();
+    } else {
+        translate([0, -limit_switch.y/2 - clip.y/2, 0]) {
+            render(convexity = 10) difference() {
+                dovetail();
+                translate([0, 0, -clip.z/2]) nsrsh_adjustment_screw(as_swivel_clearance=true);
+            }
+        }
+    }
+}
 
     
 module nsrsh_adjustable_mount(
@@ -204,7 +214,7 @@ module nsrsh_adjustable_mount(
         slide_length = 10) {
     limit_switch =  rls_base(); 
     z_slide = slide_length;
-    s_slide = 9;
+    s_slide = 10;
 
     
     module slide(as_clearance = false) {
@@ -213,18 +223,18 @@ module nsrsh_adjustable_mount(
 
         translate([0, -2, 0]) {
             intersection() {
-                rotate([0, 0, 45]) block([s, s, z], center=BELOW);
-                block([a_lot, 4, a_lot]);
+                hull() {
+                    rotate([0, 0, 45]) block([s, s, z], center=BELOW);
+                    translate([0, -4, 0]) rotate([0, 0, 45]) block([s, s, z], center=BELOW);
+                }
+                translate([0, -2, 0]) block([a_lot, 8, a_lot]);
             }
         }
     }
     module shape() {
-        render(convexity = 20) difference() {
-            union() {
-                nsrsh_adjustment_screw(as_swivel = true);
-                translate([0, 0, +1.4]) slide(as_clearance = false);
-            }
-           nsrsh_adjustment_screw(as_swivel_clearance = true);
+        render(convexity =10) difference() {
+            translate([0, 0, +1.4]) slide(as_clearance = false);
+            translate([0, 0, z_slide/2]) nsrsh_adjustable_mount_clip(as_clearance = true);
         }
     } 
     if (as_slide_clearance) {
@@ -232,7 +242,7 @@ module nsrsh_adjustable_mount(
     } else {
         translate([0, -limit_switch.y/2, dz_mount]) {
             if (show_vitamins) {
-                nsrsh_adjustment_screw(as_swivel_vitamins = true, screw_length=screw_length);
+                //nsrsh_adjustment_screw(as_vitamins = true, screw_length=screw_length, z_exposure=10);
             }
             visualize(visualization_adjustable_mount) {
                 shape();
@@ -244,10 +254,11 @@ module nsrsh_adjustable_mount(
 
 module nsrsh_adjuster(show_vitamins=true, screw_length=20, slide_length=10) {
     limit_switch = rls_base();
+    screw_translation = [0, dy_adjuster_screw, 1];
     module mount_and_rails(dz_slide, slide_length) {
 
         mounting_plate = [limit_switch.x, adjuster_plate_thickness, limit_switch.z/2];
-        slide_body =  [limit_switch.x, 4, slide_length];
+        slide_body =  [limit_switch.x, 8, slide_length];
         translate([0, 0, 1])  block(mounting_plate,  center= ABOVE + LEFT);        
         render(convexity=10) difference() {
             translate([0, 0, 1])  block(slide_body, center = BELOW + LEFT);
@@ -258,16 +269,16 @@ module nsrsh_adjuster(show_vitamins=true, screw_length=20, slide_length=10) {
     module shape() {
         render(convexity=10) difference() {
              union() {
-                mount_and_rails(dz_slide=-6, slide_length =slide_length);
-                nsrsh_adjustment_screw(as_nut_block = true); 
+                mount_and_rails(dz_slide=-4, slide_length =slide_length);
+                translate(screw_translation) nsrsh_adjustment_screw(as_nut_block = true); 
             }
            roller_limit_switch_mounting_screws(as_clearance = true);
-            nsrsh_adjustment_screw(as_clearance = true);
+            translate(screw_translation) nsrsh_adjustment_screw(as_clearance = true);
         }
     }
     translate([0, -limit_switch.y/2, 0]) {
-        if (show_vitamins) {
-            nsrsh_adjustment_screw(as_clearance = false, screw_length=screw_length);
+        if (show_vitamins && !mode_is_printing(mode)) {
+            //translate(screw_translation) nsrsh_adjustment_screw(as_clearance = false, screw_length=screw_length);
         }
         visualize(visualization_adjuster) {
             shape();
@@ -394,7 +405,7 @@ module nsrsh_ferrule_clamp(
             roller_limit_switch_mounting_screws(as_clearance = true, for_ferrules=true);
         }        
     }
-    if (show_vitamins) {
+    if (show_vitamins && !mode_is_printing(mode)) {
         roller_limit_switch(roller_arm_length=roller_arm_length, switch_depressed=switch_depressed);
         ferrules();
         clamp_screws();
@@ -539,7 +550,7 @@ module nsrsh_terminal_end_clamp(
         }      
     }
     module right_handed_part() {
-        if (show_vitamins) {
+        if (show_vitamins  && !mode_is_printing(mode)) {
             roller_limit_switch(roller_arm_length=roller_arm_length, switch_depressed=switch_depressed);   
             roller_limit_switch_mounting_screws(base_plate_thickness = thickness, recess = recess_mounting_screws);
             connection_screws();
