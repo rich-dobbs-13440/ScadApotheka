@@ -200,14 +200,14 @@ module flute_barbed_tubing_clearance() {
     }
 }
 
-module flute_collet(is_filament_entrance=true, as_clearance=false) {
+module flute_collet(is_filament_entrance=true, as_clearance=false, entrance_multiplier=5) {
     clamp = flute_clamp_connector();
     connector = flute_connector();
     
     module cavity() {
         flute_barbed_tubing_clearance();
         translate([0, 0, z_clamp + core_length])  
-            flute_filament_path(is_entrance = is_filament_entrance);
+            flute_filament_path(is_entrance = is_filament_entrance, multiplier = entrance_multiplier);
         
     }
     if (as_clearance) {
@@ -300,17 +300,17 @@ module flute_union(sides=6, h_union_core = 6) {
 }
 
 
-module flute_keyhole(is_filament_entrance, print_from_key_opening) {
+module flute_keyhole(is_filament_entrance, print_from_key_opening, entrance_multiplier=5) {
     connector = flute_connector();
      bridging_diameter = is_filament_entrance ? entrance_diameter: d_filament+ 2*filament_clearance;
-    echo("bridging_diameter", bridging_diameter);
+    //echo("bridging_diameter", bridging_diameter);
     quarter_turn_clamping_connector_keyhole(connector, print_from_key_opening, bridging_diameter=bridging_diameter) {
         // Need to pass chidren through this module
         children();
     }
     // Adjustment of opening so there is no edge to catch at top of collet for entrances, and outlet doesn't interfere with bridging. 
    dz_path =  print_from_key_opening && is_filament_entrance ? 5 : 0;
-    translate([0, 0, dz_path]) flute_filament_path(is_entrance = is_filament_entrance);
+    translate([0, 0, dz_path]) flute_filament_path(is_entrance = is_filament_entrance, multiplier=entrance_multiplier);
 }
 
 

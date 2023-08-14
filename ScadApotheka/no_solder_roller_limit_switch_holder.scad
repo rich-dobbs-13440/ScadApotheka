@@ -57,6 +57,8 @@ adjustment_rails = true;
 adjuster_screw_length = 20;
 
 
+extra_terminals = 0; // [0, 1, 2];
+
 dz_mount = mode_is_printing(mode) ? -50: dz_adjustable_mount;
 
 /* [Design Parameters] */
@@ -101,7 +103,7 @@ visualization_adjustable_mount =
 function mounting_plate(thickness) = [rls_base().x, thickness, rls_base().z + rls_prong().z + 0.1 ];
 function mounting_plate_translation() = [0, rls_base().y/2, -4];
 
-function terminal_positions() = let (prongs = rls_dx_prongs()) [prongs[0], prongs[1], prongs[2], 15];
+
 
 if (show_ferrule_clamp) {
     nsrsh_ferrule_clamp(
@@ -118,7 +120,8 @@ if (show_terminal_end_clamp) {
         thickness=plate_thickness, 
         adjustment_rails = adjustment_rails,
         roller_arm_length = roller_arm_length,
-        switch_depressed = switch_depressed);
+        switch_depressed = switch_depressed, 
+        extra_terminals = extra_terminals);
 }
 
 if (show_adjuster) {
@@ -429,6 +432,9 @@ module nsrsh_ferrule_clamp(
     }
 }
 
+function cat(L1, L2) = [for (i=[0:len(L1)+len(L2)-1]) 
+                        i < len(L1)? L1[i] : L2[i-len(L1)]] ;
+
 
 module nsrsh_terminal_end_clamp(
         show_vitamins=show_vitamins, 
@@ -440,10 +446,14 @@ module nsrsh_terminal_end_clamp(
         use_dupont_connectors = true, 
         roller_arm_length = 20,
         switch_depressed = false, 
-        trim_base = false) {
+        trim_base = false, 
+        extra_terminals = 0,
+        double_row_dupont_connectors = false) {
             
-   limit_switch =  rls_base();  
-   prong = rls_prong();
+    limit_switch =  rls_base();  
+    prong = rls_prong();
+    extra_terminal_positions =  [for (i = [0: 1: extra_terminals - 1]) 15 + i * 8];
+    function terminal_positions() =  cat(rls_dx_prongs(), extra_terminal_positions);
             
     dx_terminals = max(terminal_positions()) - min(terminal_positions());
     terminal_block = [dx_terminals + 8, limit_switch.y + thickness, 9];
@@ -468,21 +478,23 @@ module nsrsh_terminal_end_clamp(
                     housing_color="blue",         
                     center=RIGHT,
                     housing=DUPONT_STD_HOUSING(),
-                    has_pin=true);               
-            translate([dx + pin_offset, dy, dz + 2*pin_offset]) 
-                dupont_connector(
-                    wire_color="green", 
-                    housing_color="purple",         
-                    center=RIGHT,
-                    housing=DUPONT_STD_HOUSING(),
-                    has_pin=true);   
-            translate([dx - pin_offset, dy, dz + 2*pin_offset]) 
-                dupont_connector(
-                    wire_color="orange", 
-                    housing_color="brown",         
-                    center=RIGHT,
-                    housing=DUPONT_STD_HOUSING(),
-                    has_pin=true);                 
+                    has_pin=true);     
+            if (double_row_dupont_connectors) {          
+                translate([dx + pin_offset, dy, dz + 2*pin_offset]) 
+                    dupont_connector(
+                        wire_color="green", 
+                        housing_color="purple",         
+                        center=RIGHT,
+                        housing=DUPONT_STD_HOUSING(),
+                        has_pin=true);   
+                translate([dx - pin_offset, dy, dz + 2*pin_offset]) 
+                    dupont_connector(
+                        wire_color="orange", 
+                        housing_color="brown",         
+                        center=RIGHT,
+                        housing=DUPONT_STD_HOUSING(),
+                        has_pin=true);   
+            }              
         }     
     }
 
@@ -503,8 +515,10 @@ module nsrsh_terminal_end_clamp(
                         if (use_dupont_connectors) {
                            translate([0, pin_offset, -0.1]) rod(d=1.2, l=a_lot, $fn=12);
                            translate([0, -pin_offset, -0.1]) rod(d=1.2, l=a_lot, $fn=12);
-                           translate([0, pin_offset, -0.1+2*pin_offset]) rod(d=1.2, l=a_lot, $fn=12);
-                           translate([0, -pin_offset, -0.1+2*pin_offset]) rod(d=1.2, l=a_lot, $fn=12);                                
+                            if (double_row_dupont_connectors) {
+                               translate([0, pin_offset, -0.1+2*pin_offset]) rod(d=1.2, l=a_lot, $fn=12);
+                               translate([0, -pin_offset, -0.1+2*pin_offset]) rod(d=1.2, l=a_lot, $fn=12);      
+                            }                          
                         }
                     }
                 } else {
