@@ -448,6 +448,7 @@ module nsrsh_terminal_end_clamp(
         switch_depressed = false, 
         trim_base = false, 
         extra_terminals = 0,
+        z_terminal_block = 9,
         double_row_dupont_connectors = false) {
             
     limit_switch =  rls_base();  
@@ -456,7 +457,7 @@ module nsrsh_terminal_end_clamp(
     function terminal_positions() =  cat(rls_dx_prongs(), extra_terminal_positions);
             
     dx_terminals = max(terminal_positions()) - min(terminal_positions());
-    terminal_block = [dx_terminals + 8, limit_switch.y + thickness, 9];
+    terminal_block = [dx_terminals + 8, limit_switch.y + thickness, z_terminal_block];
     screw_length = use_dupont_connectors ? 6 : 10;
     dz_nutcut = -screw_length + 3.1;   
     pin_offset = 2.54/2;

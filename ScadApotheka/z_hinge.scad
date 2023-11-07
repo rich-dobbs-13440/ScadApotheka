@@ -1,8 +1,8 @@
 
-include <logging.scad>
-include <centerable.scad>
-use <shapes.scad>
-include <not_included_batteries.scad>
+include <ScadStoicheia/logging.scad>
+include <ScadStoicheia/centerable.scad>
+use <ScadStoicheia/shapes.scad>
+include <ScadStoicheia/not_included_batteries.scad>
 
 
 /* [Boiler Plate] */

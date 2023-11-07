@@ -153,7 +153,7 @@ if (show_collet) {
 }
 
 if (show_collet_nut) {
-     translate([40, 0, 0]) rotate([0, 0, az_clip])  flute_collet_nut(sides = 4);
+    //translate([40, 0, 0]) rotate([0, 0, az_clip])  flute_collet_nut(sides = 4);
     translate([40, 20, 0]) rotate([0, 0, az_clip])  flute_collet_nut(sides = 6);
 }
 
