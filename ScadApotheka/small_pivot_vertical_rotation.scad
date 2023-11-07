@@ -48,7 +48,7 @@ infinity = 1000;
 show_ = true;
 show_gudgeon = false;
 show_pintle = false;
-show_removable_pin_clearance = false;
+//show_removable_pin_clearance = false;
 show_removable_pin_gudgeon_bearing = false;
 show_pintle_external_nut_catch = false;
 
@@ -78,15 +78,15 @@ catch_strength_l = w_/2;
 module end_of_customization() {}
 
 // ------------------------ Start of demonstration -------------------------------
-if (show_removable_pin_clearance) {
-    removable_pin_clearance(
-        h_, 
-        w_, 
-        lp_, 
-        allowance_, 
-        catch_strength_l, 
-        catch_max_l=5);
-}
+//if (show_removable_pin_clearance) {
+//    removable_pin_clearance(
+//        h_, 
+//        w_, 
+//        lp_, 
+//        allowance_, 
+//        catch_strength_l, 
+//        catch_max_l=5);
+//}
 
 
 if (show_) {
