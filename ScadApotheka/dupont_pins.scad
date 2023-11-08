@@ -21,7 +21,7 @@ dupont_connector(
 
 */
 include <ScadStoicheia/centerable.scad>
-include <small_pivot.scad>
+//include <small_pivot.scad>
 
 
 

@@ -1,12 +1,37 @@
-/* 
+/*
+
+This is primarily a Horizontal Pivot with a Barrel configuration.  If special care
+it can also be printed so that it pivots vertically.
+
+
 
 Usage: 
-include <ScadApotheka/small_pivot.scad>
 
+use <ScadApotheka/audrey_horizontal_pivot.scad>
+include <ScadApotheka/audrey_horizontal_pivot_constants.scad>
+
+        // Use the children to generate an attachment
+        clipping_diameter = 9;
+        child_idx_handle_for_bearing = 0;
+        child_idx_handle_for_tcap = 1;
+        child_idx_handle_for_lcap = 2;
+        
+        attachment_instructions = [
+            [ADD_HULL_ATTACHMENT, AP_BEARING, child_idx_handle_for_bearing, clipping_diameter],
+            [ADD_HULL_ATTACHMENT, AP_TCAP, child_idx_handle_for_tcap, clipping_diameter],
+            [ADD_HULL_ATTACHMENT, AP_LCAP, child_idx_handle_for_lcap, clipping_diameter],
+            [ADD_SPRUES, AP_LCAP, [45, 135, 225, 315]],
+        ];
+        audrey_horizontal_pivot(size_t, air_gap_t, angle_bearing_t, angle_pin_t, attachment_instructions=attachment_instructions) {
+            handle_for_bearing();
+            handle_for_tcap();
+            handle_for_lcap();
+        }
 
 */
 
 use <ScadStoicheia/vector_cylinder.scad>
+include <ScadApotheka/audrey_horizontal_pivot_constants.scad>
 
 /* [Boiler Plate] */
 
@@ -17,19 +42,21 @@ eps = 0.001;
 
 
 /* [Show] */
-show_pivot = false;
-show_pivot_default_colors=false;
-show_pivot_with_weird_colors = false;
+show_pivot_example_colors = true;
+show_pivot_default_colors = true;
+show_pivot_with_weird_colors = true;
+show_mounting_on_side_hand_crafted = true;
+
 show_pin = false;
 show_bearing = false;
 show_bearing_rotational_group = false;
 show_pin_rotational_group = false;
-show_sprue = false;
+show_sprues = false;
 show_mounting_on_top_of_item = false;
-show_bearing_attachment_revision = false;
-show_mounting_on_side = false;
-show_mounting_on_side_hand_crafted = false;
-show_supports_for_side_attachment = false;
+show_bearing_attachment_revision = true;
+show_mounting_on_side = true;
+
+show_supports_for_side_attachment = true;
 
 /* [Colors] */
 lcap_color_t = "Moccasin"; // ["Moccasin", "red", "blue", "green", "yellow", "orange", "purple"]
@@ -44,7 +71,7 @@ tcap_join_color_t = "LightBlue"; // ["LightBlue", "red", "blue", "green", "yello
 
 bearing_post_color_t = "OrangeRed"; // ["LightSalmon", "red", "blue", "green", "yellow", "orange", "purple"]
 
-/* [Adjustments] */
+/* [Example Customization] */
 
 size_t = 1; // [0: 0.1 : 10]
 air_gap_t = 0.45; // [0.3: 0.01 : 0.6]
@@ -83,20 +110,229 @@ function default_colors() =
     "SteelBlue"
 ];
 
-module empty() {} // Just to hide following from customizer
+
+if (show_sprues) {
+    sprues(size=size_t, air_gap=air_gap_t, l_angles=[0, 120, 240], t_angles=[0,90, 180, 270]);
+}
+
+if (show_pin) {
+    pin(size=size_t, air_gap=0, colors=colors_t()); 
+}
+
+if (show_bearing) {
+    bearing(size=size_t, air_gap=air_gap_t, colors=colors_t()); 
+}
+
+if (show_bearing_rotational_group) {
+    rotational_group(RG_BEARING, size=size_t, colors=colors_t()); 
+}
+
+ if (show_pin_rotational_group) {
+    rotational_group(RG_PIN, size=size_t, colors=colors_t());
+}
+
+if (show_pivot_example_colors) {
+    translate([10, 0, 0]) 
+        audrey_horizontal_pivot(size_t, air_gap_t, angle_bearing_t, angle_pin_t, colors=colors_t());
+} 
+
+if (show_pivot_default_colors) {
+    translate([20, 0, 0]) 
+        audrey_horizontal_pivot(size_t, air_gap_t, angle_bearing_t, angle_pin_t);
+} 
+
+if (show_pivot_with_weird_colors) {
+    weird_colors = [
+        "Thistle", "Salmon", "LightSteelBlue", "PeachPuff", "MidnightBlue",
+        "WhiteSmoke", "Salmon", "LightSteelBlue", "PeachPuff", "MidnightBlue"
+    ];
+    translate([30, 0, 0]) 
+      audrey_horizontal_pivot(size_t, air_gap_t, angle_bearing_t, angle_pin_t, colors=weird_colors);
+}
+
+
+
+
+if (show_mounting_on_side_hand_crafted) {
+    pivot_size = 0.7;
+    air_gap = 0.35;
+    translate([40, 0, 0]) 
+        vertical_pivot_with_hand_crafted_mounting_on_side(pivot_size, air_gap);
+}
+
+
+
+
+module vertical_pivot_with_hand_crafted_mounting_on_side(size, air_gap, colors) {
+    
+    // Although this pivot is design for horizontal rotation, it is printable so that it can 
+    // rotate vertically if special care is taken:
+    
+    x = 3*size;
+    y = 3*size;
+    z_l = 2*size;
+    z_t = 0.5*size;
+    dy_t = 9*size;
+    dy_l = 6*size;
+    dz_l = z_l/2;
+    dz_t = z_t/2;
+    
+    d_hdl = 8*size;
+    h_hdl = r_connector_size(size);
+    dy_hdl = 10*size;
+    dz_hdl = d_hdl/2 + size;
+     
+    
+    attachment_instructions = [
+        [ADD_HULL_ATTACHMENT, AP_LCAP, 0, -1],
+        [ADD_HULL_ATTACHMENT, AP_TCAP, 1, -1],
+        [ADD_HULL_ATTACHMENT, AP_BEARING, 2]
+    ];
+    rotate([90,0, 0]) {
+
+        audrey_horizontal_pivot(
+            size, 
+            air_gap, 
+            0, 
+            180,
+            attachment_instructions=attachment_instructions) {
+                
+            translate([0, dy_l, dz_l]) cube([x, y, z_l], center=true);
+            translate([0, dy_t, dz_t]) cube([x, y, z_t], center=true);
+            translate([0, dy_hdl, dz_hdl]) rotate([0,90,0]) cylinder(d=d_hdl, h=h_hdl, center=true);
+        }
+        
+        // Add spruces so that bearing is not hanging in mid air!
+        sprues(size=size, air_gap=air_gap, l_angles=[0], t_angles=[0]);
+        
+    }
+        
+}
+
+if (show_mounting_on_top_of_item) {
+    translate([50, 0,0]) {
+        plate_thickness = 0.5;
+        plate_size = 11;
+        dz = -plate_thickness/2;
+        translate([0, 0, dz]) cube([plate_size, plate_size, plate_thickness], center=true);
+
+        pivot_size = 1.;
+        air_gap = 0.35;
+        angle = 90;
+        
+        // Detemine the handle mask parameters, so that bearing handle isn't in contact with base plate
+        x_hm = 2*r_connector_size(pivot_size);
+        y_hm = 2*t_connector_size(pivot_size);
+        z_hm = r_lcap(pivot_size, air_gap);
+        dy_hm = y_hm/2 + r_lcap(pivot_size, air_gap) - air_gap;
+        dz_hm = z_hm/2;
+
+        difference() {
+            color("LightSteelBlue")  pivot(pivot_size, air_gap, angle);
+            translate([0, dy_hm, dz_hm]) cube([x_hm, y_hm, z_hm], center=true);
+        }
+        
+        // Now attach a hande that rests on the build plate.
+        d_hdl = h_total(pivot_size) + plate_thickness;
+        h_hdl = r_connector_size(pivot_size);
+        dy_hdl = r_lcap(pivot_size, air_gap) + d_hdl/2; 
+        dz_hdl = d_hdl/2 - plate_thickness ;
+        translate([0, dy_hdl, dz_hdl]) 
+        rotate([0,90,0]) cylinder(d=d_hdl, h=h_hdl, center=true);  
+    }
+}
+
+
+if (show_supports_for_side_attachment) {
+    
+    translate([70, 0, 0]) {
+    
+        plate_thickness = 1;
+        plate_size = 11;
+        dz = -plate_thickness/2;
+        dy = -3;
+        translate([0, dy, dz]) cube([plate_size, plate_size, plate_thickness], center=true);  
+        
+        wall_thickness = 1;
+        wall_height  = 12;
+        x_w = plate_size;
+        y_w = wall_thickness;
+        z_w = wall_height;
+        dz_w = z_w/2;
+        translate([0, 0, dz_w]) cube([x_w, y_w, z_w], center=true);
+        
+        pivot_size = 1;
+        air_gap = 0.55;
+        dz_p = 9;
+        
+        instructions = [
+            [ADD_CAP_YOKE, AP_LCAP],
+            [ADD_SPRUES, AP_LCAP, [165, 195]],
+            [ADD_SPRUES, AP_TCAP, [165, 195]],
+            [ADD_HULL_ATTACHMENT, AP_BEARING, 0],
+            [ADD_HULL_ATTACHMENT, AP_CAP_YOKE, 1],
+        ];
+        translate([0, 0, dz_p]) { 
+        
+            rotate([90, 0, 0]) {
+                audrey_horizontal_pivot(pivot_size, air_gap, angle_bearing=0, attachment_instructions=instructions) {
+                    
+                    bearing_handle(pivot_size);
+                    yoke_brace_attachment(pivot_size);
+                
+                }
+            }
+        
+        }
+    }
+        
+    
+}
+
+
+module fake_handle(pivot_size) {
+    
+    d_hdl = 10*pivot_size;
+    h_hdl = r_connector_size(pivot_size);
+    dy_hdl = 8;
+    dz_hdl = d_hdl/2 ;
+    translate([0, dy_hdl, dz_hdl]) 
+    rotate([0,90,0]) cylinder(d=d_hdl, h=h_hdl, center=true); 
+}
+
+
+if (show_bearing_attachment_revision) {
+    
+    translate([80, 0, 0]) {
+    //    pivot_size = 0.5;
+    //    air_gap = 0.35;
+    //    * fake_handle(pivot_size);
+        
+        
+        // Want to use the child to generate an attachment
+        clipping_diameter = 9;
+        attachment_instructions = [
+            [ADD_HULL_ATTACHMENT, AP_BEARING, 0, clipping_diameter],
+            [ADD_HULL_ATTACHMENT, AP_TCAP, 1, clipping_diameter],
+            [ADD_HULL_ATTACHMENT, AP_LCAP, 1, clipping_diameter],
+            [ADD_SPRUES, AP_LCAP, [45, 135, 225, 315]],
+        ];
+        * echo("attachment_instructions", attachment_instructions);
+            audrey_horizontal_pivot(size_t, air_gap_t, angle_bearing_t, angle_pin_t, attachment_instructions=attachment_instructions) {
+            fake_handle(size_t);
+            fake_handle(0.75*size_t);
+        }
+    }
+}
+
+
+// Start of implementation
 
 // Rotation groups
 RG_PIN = 3001;
 RG_BEARING = 3002;
 
-// Attachment points  - need to export them!  
-AP_BEARING = 2001;
-AP_LCAP = 2002;
-AP_TCAP = 2003;
-AP_CAP_YOKE = 2004;
-AP_BEARING_YOKE = 2005;
-AP_TOP_OF_TCAP = 2006;
-AP_BOTTOM_OF_LCAP = 2007;
+
 
 ROTATION_MAP = [
     [AP_BEARING, RG_BEARING],
@@ -116,11 +352,7 @@ function is_in_rotational_group(group_id, attachment_point_id) =
 assert(is_in_rotational_group(RG_PIN, AP_LCAP), "Internal error: is_in_rotational_group implementation"); 
 assert(!is_in_rotational_group(AP_BEARING, AP_LCAP), "Internal error: is_in_rotational_group implementation");  
 
-// Instruction commands - how to export??? 
-ADD_HULL_ATTACHMENT = 1001;
-ADD_HULL_WITH_BEARING_CLEARACE = 1002;
-ADD_CAP_YOKE = 1003;
-ADD_SPRUCES = 1004;
+
 
 FIRST_CHILD = 0;
 SECOND_CHILD = 1; 
@@ -296,7 +528,7 @@ module attach(attachment_point_id, size, air_gap, colors, instruction) {
     if (command == ADD_CAP_YOKE) { 
         attachment_target(AP_CAP_YOKE, size, air_gap, colors); 
     }
-    if (command == ADD_SPRUCES) {
+    if (command == ADD_SPRUES) {
         angles = instruction[2];
         * echo("angles", angles);
         if (attachment_point_id == AP_LCAP) {
@@ -340,7 +572,7 @@ module rotational_group(group_id, size, air_gap, colors, instructions) {
     } 
 }
 
-module pivot(size, air_gap, angle_bearing=0, angle_cap=180, colors=default_colors(), attachment_instructions=[]) {
+module audrey_horizontal_pivot(size, air_gap, angle_bearing=0, angle_cap=180, colors=default_colors(), attachment_instructions=[]) {
 
     assert(!is_undef(size), "You must specify size");
     assert(!is_undef(air_gap), "You must specify air_gap");
@@ -398,153 +630,12 @@ module sprues(size, air_gap, l_angles, t_angles) {
     }
 }
 
-if (show_sprue) {
-    sprues(size=size_t, air_gap=air_gap_t,l_angles=[0, 120, 240], t_angles=[0,90, 180, 270]);
-}
-
-if (show_pin) {
-    pin(size=size_t, air_gap=0, colors=colors_t()); 
-}
-
-if (show_bearing) {
-    bearing(size=size_t, air_gap=air_gap_t, colors=colors_t()); 
-}
-
-if (show_bearing_rotational_group) {
-    rotational_group(RG_BEARING, size=size_t, colors=colors_t()); 
-}
-
- if (show_pin_rotational_group) {
-    rotational_group(RG_PIN, size=size_t, colors=colors_t());
-}
-
-if (show_pivot) {
-    pivot(size_t, air_gap_t, angle_bearing_t, angle_pin_t, colors=colors_t());
-} 
-
-if (show_pivot_default_colors) {
-    pivot(size_t, air_gap_t, angle_bearing_t, angle_pin_t);
-} 
-
-if (show_pivot_with_weird_colors) {
-    weird_colors = [
-        "Thistle", "Salmon", "LightSteelBlue", "PeachPuff", "MidnightBlue",
-        "WhiteSmoke", "Salmon", "LightSteelBlue", "PeachPuff", "MidnightBlue"
-    ];
-    pivot(size_t, air_gap_t, angle_bearing_t, angle_pin_t, colors=weird_colors);
-}
-
-if (show_mounting_on_top_of_item) {
-    plate_thickness = 0.5;
-    plate_size = 11;
-    dz = -plate_thickness/2;
-    translate([0, 0, dz]) cube([plate_size, plate_size, plate_thickness], center=true);
-
-    pivot_size = 1.;
-    air_gap = 0.35;
-    angle = 90;
-    
-    // Detemine the handle mask parameters, so that bearing handle isn't in contact with base plate
-    x_hm = 2*r_connector_size(pivot_size);
-    y_hm = 2*t_connector_size(pivot_size);
-    z_hm = r_lcap(pivot_size, air_gap);
-    dy_hm = y_hm/2 + r_lcap(pivot_size, air_gap) - air_gap;
-    dz_hm = z_hm/2;
-
-    difference() {
-        color("LightSteelBlue")  pivot(pivot_size, air_gap, angle);
-        translate([0, dy_hm, dz_hm]) cube([x_hm, y_hm, z_hm], center=true);
-    }
-    
-    // Now attach a hande that rests on the build plate.
-    d_hdl = h_total(pivot_size) + plate_thickness;
-    h_hdl = r_connector_size(pivot_size);
-    dy_hdl = r_lcap(pivot_size, air_gap) + d_hdl/2; 
-    dz_hdl = d_hdl/2 - plate_thickness ;
-    translate([0, dy_hdl, dz_hdl]) 
-    rotate([0,90,0]) cylinder(d=d_hdl, h=h_hdl, center=true);  
-}
 
 
-module fake_handle(pivot_size) {
-    
-    d_hdl = 10*pivot_size;
-    h_hdl = r_connector_size(pivot_size);
-    dy_hdl = 5;
-    dz_hdl = d_hdl/2 ;
-    translate([0, dy_hdl, dz_hdl]) 
-    rotate([0,90,0]) cylinder(d=d_hdl, h=h_hdl, center=true); 
-}
 
 
-if (show_bearing_attachment_revision) {
-    pivot_size = 0.5;
-    air_gap = 0.35;
-    * fake_handle(pivot_size);
-    
-    
-    // Want to use the child to generate an attachment
-    clipping_diameter = 9;
-    attachment_instructions = [
-        [ADD_HULL_ATTACHMENT, AP_BEARING, 0, clipping_diameter],
-        [ADD_HULL_ATTACHMENT, AP_TCAP, 1, clipping_diameter],
-        [ADD_HULL_ATTACHMENT, AP_LCAP, 1, clipping_diameter]
-    ];
-    * echo("attachment_instructions", attachment_instructions);
-    pivot(pivot_size, air_gap, angle_bearing_t, angle_pin_t, attachment_instructions=attachment_instructions) {
-        fake_handle(pivot_size);
-        fake_handle(0.75*pivot_size);
-    }
-}
 
-module v_pivot(size, air_gap, colors) {
-    
-    x = 3*size;
-    y = 3*size;
-    z_l = 2*size;
-    z_t = 0.5*size;
-    dy_t = 9*size;
-    dy_l = 6*size;
-    dz_l = z_l/2;
-    dz_t = z_t/2;
-    
-    d_hdl = 8*size;
-    h_hdl = r_connector_size(size);
-    dy_hdl = 10*size;
-    dz_hdl = d_hdl/2 + size;
-     
-    
-    attachment_instructions = [
-        [ADD_HULL_ATTACHMENT, AP_LCAP, 0, -1],
-        [ADD_HULL_ATTACHMENT, AP_TCAP, 1, -1],
-        [ADD_HULL_ATTACHMENT, AP_BEARING, 2]
-    ];
-    rotate([90,0, 0]) {
 
-        pivot(
-            size, 
-            air_gap, 
-            0, 
-            180,
-            attachment_instructions=attachment_instructions) {
-                
-            translate([0, dy_l, dz_l]) cube([x, y, z_l], center=true);
-            translate([0, dy_t, dz_t]) cube([x, y, z_t], center=true);
-            translate([0, dy_hdl, dz_hdl]) rotate([0,90,0]) cylinder(d=d_hdl, h=h_hdl, center=true);
-        }
-        
-        // Add spruces so that bear is hanging in mid air!
-        sprues(size=size, air_gap=air_gap, l_angles=[0], t_angles=[0]);
-        
-    }
-        
-}
-
-if (show_mounting_on_side_hand_crafted) {
-    pivot_size = 0.7;
-    air_gap = 0.35;
-    v_pivot(pivot_size, air_gap);
-}
 
 module bearing_handle(size) {
     
@@ -570,45 +661,5 @@ module yoke_brace_attachment(size) {
 
 
 
-if (show_supports_for_side_attachment) {
-    plate_thickness = 1;
-    plate_size = 11;
-    dz = -plate_thickness/2;
-    dy = -3;
-    translate([0, dy, dz]) cube([plate_size, plate_size, plate_thickness], center=true);  
-    
-    wall_thickness = 1;
-    wall_height  = 12;
-    x_w = plate_size;
-    y_w = wall_thickness;
-    z_w = wall_height;
-    dz_w = z_w/2;
-    translate([0, 0, dz_w]) cube([x_w, y_w, z_w], center=true);
-    
-    pivot_size = 1;
-    air_gap = 0.55;
-    dz_p = 9;
-    
-    instructions = [
-        [ADD_CAP_YOKE, AP_LCAP],
-        [ADD_SPRUCES, AP_LCAP, [165, 195]],
-        [ADD_SPRUCES, AP_TCAP, [165, 195]],
-        [ADD_HULL_ATTACHMENT, AP_BEARING, 0],
-        [ADD_HULL_ATTACHMENT, AP_CAP_YOKE, 1],
-    ];
-    translate([0, 0, dz_p]) { 
-    
-        rotate([90, 0, 0]) {
-            pivot(pivot_size, air_gap, angle_bearing=0, attachment_instructions=instructions) {
-                
-                bearing_handle(pivot_size);
-                yoke_brace_attachment(pivot_size);
-            
-            }
-        }
-    
-    }
-    
-    
-}
+
 

@@ -1,7 +1,7 @@
 use <ScadStoicheia/vector_cylinder.scad>
 
 
-use <ScadApotheka/small_pivot.scad>
+
 /* [Boiler Plate] */
 
 $fa = 1;
