@@ -24,18 +24,21 @@ use <ScadStoicheia/visualization.scad>
 include <ScadApotheka/material_colors.scad>
 use <ScadApotheka/roller_limit_switch.scad>
 use <ScadApotheka/dupont_pins.scad>
+use <ScadApotheka/m2_terminal_contact.scad>
 
 a_lot = 100 + 0;
 /* [Output Control] */
  mode = 3; // [3: "Assembly", 4: "Printing"]
  
 show_vitamins = true;
-show_ferrule_clamp = true;
-show_terminal_end_clamp = true;
+show_ferrule_clamp = false;
+show_terminal_end_clamp = false;
+show_terminal_side_clamp = true;
 
-show_adjuster = true;
-show_adjustable_mount = true;
-show_adjustable_mount_clip = true;
+
+show_adjuster = false;
+show_adjustable_mount = false;
+show_adjustable_mount_clip = false;
 
 
 adjuster  = 1; // [1:Solid, 0.25:Ghostly, 0:Invisible]
@@ -61,11 +64,14 @@ recess_mounting_screws = true;
 right_handed_terminal_end_clamp = true;
 roller_arm_length = 20; //[18:short, 20: long]
 
+
 adjustment_rails = true;
 adjuster_screw_length = 20;
 
+extra_terminals = 0; // [0, 1, 2]
+terminals_on_bottom = false;
 
-extra_terminals = 0; // [0, 1, 2];
+roller_is_at_end = false;
 
 dz_mount = mode_is_printing(mode) ? -50: dz_adjustable_mount;
 
@@ -132,23 +138,17 @@ if (show_terminal_end_clamp) {
             roller_arm_length = roller_arm_length,
             switch_depressed = switch_depressed, 
             extra_terminals = extra_terminals, 
-            terminals_on_bottom = true);
-    
-    
-    translate([80, 40, 0]) 
-        nsrsh_terminal_end_clamp(
-            right_handed = right_handed_terminal_end_clamp,
-            alpha=alpha_terminal_end_clamp, 
-            recess_mounting_screws = recess_mounting_screws,
-            thickness=plate_thickness, 
-            adjustment_rails = adjustment_rails,
-            roller_arm_length = roller_arm_length,
-            switch_depressed = switch_depressed, 
-            extra_terminals = extra_terminals, 
-            terminals_on_bottom = false);    
+            terminals_on_bottom = terminals_on_bottom);
+
 }
 
-translate([120, 0, 0]) {
+if (show_terminal_side_clamp) {
+    translate([120, 0, 0]) 
+    nsrsh_terminal_side_clamp(roller_is_at_end = roller_is_at_end, show_vitamins = show_vitamins);
+}
+
+
+translate([160, 0, 0]) {
     if (show_adjuster) {
         nsrsh_adjuster(show_vitamins=show_vitamins, screw_length=adjuster_screw_length, slide_length=adjuster_slide_length);
     }
@@ -166,6 +166,48 @@ translate([120, 0, 0]) {
         translate([0, 0, dz_adjuster]) nsrsh_adjustable_mount_clip();
     }
 
+}
+
+
+module nsrsh_terminal_side_clamp(roller_is_at_end = false, show_vitamins=false) {
+    center_terminal_offset = roller_is_at_end ? 0.5 : -0.5;
+    screw_offsets = [-20, -14, -8, center_terminal_offset, 8];
+    screw_lengths = [4, 4, 10, 10, 10];
+    screw_exposure = 1.1;
+    t_terminal_strip = [0, rls_prong().y/2 + screw_exposure,  rls_base().z/2 + 4];
+    t_mount = [0, rls_base().y/2, rls_base().z/2 + 1.5];
+    mounting_base_thickness = 3.1;
+    z_extra_base = 2.5;
+    
+    
+    module shape() {
+        translate(t_terminal_strip) {
+            rotate([0, 90, 90]) m2_screw_terminal_contact_strip(
+                screw_offsets, 
+                screw_lengths, 
+                d_row_2 = m2stc_fit_dupont_pin(), 
+                z_extra_base = z_extra_base,
+                show_vitamins=show_vitamins && !mode_is_printing(mode), 
+                color_code=PART_33);
+        }
+        difference() {
+            translate(t_mount) block([16, mounting_base_thickness, 8], center=BELOW+RIGHT);
+            roller_limit_switch(as_mounting_clearance = true);
+        }
+    }
+    
+    rotation = mode_is_printing(mode) ? [180, 0, 0] : [0, 0, 0];
+    z_printing = mode_is_printing(mode) ? rls_base().z/2 + 0.5 + 7  : 0;
+    translation = [0, 0, z_printing];
+    translate(translation) rotate(rotation) {
+    
+        if (show_vitamins && !mode_is_printing(mode)) {
+            az = roller_is_at_end ? 0 : 180;
+            rotate([0, 0, az]) roller_limit_switch(roller_arm_length=roller_arm_length, switch_depressed=switch_depressed);
+        }
+        shape();
+    }
+    
 }
 
 
@@ -464,6 +506,8 @@ module nsrsh_ferrule_clamp(
 
 function cat(L1, L2) = [for (i=[0:len(L1)+len(L2)-1]) 
                         i < len(L1)? L1[i] : L2[i-len(L1)]] ;
+
+
 
 
 module nsrsh_terminal_end_clamp(
