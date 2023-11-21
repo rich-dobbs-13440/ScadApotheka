@@ -569,13 +569,13 @@ module rotational_group(group_id, height, r_axle, air_gap, colors, instructions)
     } 
 }
 
-module audrey_horizontal_pivot(height, d_axle, air_gap=0.4, angle_bearing=0, angle_cap=180, colors=default_colors(), attachment_instructions=[]) {
+module audrey_horizontal_pivot(height, d_axle, air_gap=0.4, angle_bearing=0, angle_pin=180, colors=default_colors(), attachment_instructions=[]) {
 
     assert(!is_undef(height), "You must specify height");
     assert(!is_undef(r_axle), "You must specify r_axle");
     assert(!is_undef(air_gap), "You must specify air_gap");
     assert(is_num(angle_bearing), "angle_bearing must be a number");
-    assert(is_num(angle_cap), "angle_cap must be a number");
+    assert(is_num(angle_pin), "angle_pin must be a number");
     assert(len(colors) >= 5,"The number of colors must be at least 5");
     
     * echo("In pivot module")
@@ -590,7 +590,7 @@ module audrey_horizontal_pivot(height, d_axle, air_gap=0.4, angle_bearing=0, ang
     
     pin(height, d_axle, 0.0, colors);
     bearing(height, d_axle, air_gap, colors);
-    rotate([0, 0, angle_cap]) {
+    rotate([0, 0, angle_pin]) {
         rotational_group(RG_PIN, height, r_axle, air_gap, colors, attachment_instructions) {
             // Kludge to avoid implicit union!
             children(0);
