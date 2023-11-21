@@ -26,6 +26,8 @@ include <ScadApotheka/audrey_horizontal_pivot_constants.scad>
             handle_for_lcap();
         }
         
+        radius_of_bearing = ahpb_r_bearing(height, d_axle);
+        
         
         The angles angle_bearing and angle_pin are measured from the y axis.
         
@@ -122,7 +124,7 @@ function default_colors() =
 
 
 if (show_sprues) {
-    audrey_horizontal_pivot(debug_show_only_sprues=true, height=height_t, d_axle =d_axle_t, air_gap=air_gap_t, debug_l_angles=[0, 120, 240], debug_t_angles=[0,90, 180, 270]);
+    ahpb_sprues(height=height_t, d_axle =d_axle_t, air_gap=air_gap_t, l_angles=[0, 120, 240], t_angles=[0,90, 180, 270]);
 }
 
 if (show_pin) {
@@ -373,11 +375,10 @@ S_H_AXLE = 0.20;
 S_H_TCONE = 0.20;
 S_H_TCAP = 0.20;
 
-R_CONNECTOR_SIZE = 1.0;
 T_CONNECTOR_SIZE = 0.25;
 
 
-function ahpb_r_connector_size(size, r_axle) =  r_axle + S_H_LCONE * size; 
+function ahpb_r_connector_size(height, r_axle) =  r_axle + S_H_LCONE * height; 
 
 
 module ahpb_sprues(height, d_axle, air_gap, l_angles, t_angles) {
@@ -385,7 +386,7 @@ module ahpb_sprues(height, d_axle, air_gap, l_angles, t_angles) {
     
     h_sprue = 2*air_gap;
     r_sprue = air_gap;
-    dy = - ahpb_r_bearing(height, d_axle/2) - air_gap/2;
+    dy = - ahpb_r_bearing(height, d_axle) - air_gap/2;
     
     for (a = l_angles) {
         dz = h_lcap(height) + h_sprue/2;
@@ -397,7 +398,7 @@ module ahpb_sprues(height, d_axle, air_gap, l_angles, t_angles) {
     }
 }
 
-function ahpb_r_bearing(height, r_axle) = r_axle + S_H_LCONE * height ;
+function ahpb_r_bearing(height,d_axle) = d_axle/2 + S_H_LCONE * height ;
 function h_lcap(height) = S_H_LCAP * height;
 function h_bearing(height) = h_lcone(height) + h_axle(height) + h_tcone(height);
 
@@ -405,8 +406,6 @@ function r_lcap(height, r_axle, air_gap) =  r_axle + S_H_LCONE * height + air_ga
 function r_lcone(height, r_axle, air_gap) = r_axle + S_H_LCONE * height + air_gap;
 function r_tcone(height, r_axle, air_gap) = r_axle + S_H_TCONE * height + air_gap;
 function r_tcap(height, r_axle, air_gap) = r_axle + S_H_TCONE * height + air_gap;
-
-
 
 function t_connector_size(height) = T_CONNECTOR_SIZE * height;
 
@@ -428,10 +427,7 @@ module audrey_horizontal_pivot(
     debug_show_only_rotational_group = false, 
     debug_group_id = 0,
     debug_show_only_bearing=false, 
-    debug_show_only_pin=false,
-    debug_show_only_sprues=false,
-    debug_l_angles=[], 
-    debug_t_angles=[]) {
+    debug_show_only_pin=false) {
         
         
     function columns() = [vcf_r1_idx(), vcf_r2_idx(), vcf_h_idx(), vcf_color_idx()];        
@@ -454,14 +450,11 @@ module audrey_horizontal_pivot(
             data, 
             colors);  
     }      
-  
 
-    
-
-    module ahpb_bearing(height, d_axle, air_gap, colors) {
+    module bearing(height, d_axle, air_gap, colors) {
         
         bearing_color = colors[IDX_BEARING_COLOR];
-        r = ahpb_r_bearing(height, d_axle/2);
+        r = ahpb_r_bearing(height, d_axle);
         dz = h_lcap(height) + h_bearing(height)/2;
         color(bearing_color, alpha=0.35) {
             difference() {
@@ -474,21 +467,21 @@ module audrey_horizontal_pivot(
     
     module bearing_join(height, r_axle, colors) {
         x = t_connector_size(height);
-        y = ahpb_r_connector_size(height, r_axle) + ahpb_r_bearing(height, r_axle);
+        y = ahpb_r_connector_size(height, r_axle) + ahpb_r_bearing(height, 2*r_axle);
         z = h_bearing(height);
         dy = y/2;
         dz = z / 2 + h_lcap(height);
         color(colors[IDX_BEARING_JOIN_COLOR]) {
             difference() {
                 translate([0, dy, dz]) cube([x, y, z], center=true);
-                cylinder(r=ahpb_r_bearing(height, r_axle), h=a_lot, center=true);
+                cylinder(r=ahpb_r_bearing(height, 2*r_axle), h=a_lot, center=true);
             }
         }
     }      
     
     module l_cap_join(height, r_axle, colors) {
         x = t_connector_size(height);
-        y = ahpb_r_connector_size(height, r_axle) + ahpb_r_bearing(height, r_axle);
+        y = ahpb_r_connector_size(height, r_axle) + ahpb_r_bearing(height, 2*r_axle);
         z = h_lcap(height);
         dy = y/2;
         dz = z / 2;   
@@ -502,7 +495,7 @@ module audrey_horizontal_pivot(
     
     module t_cap_join(height, r_axle, colors) {
         x = t_connector_size(height);
-        y = ahpb_r_connector_size(height, r_axle) + ahpb_r_bearing(height, r_axle);
+        y = ahpb_r_connector_size(height, r_axle) + ahpb_r_bearing(height, 2*r_axle);
         z = h_tcap(height);
         dy = y/2;
         dz = height - z / 2;   
@@ -587,7 +580,7 @@ module audrey_horizontal_pivot(
     //assert(is_in_rotational_group(RG_PIN, AP_LCAP), "Internal error: is_in_rotational_group implementation"); 
     //assert(!is_in_rotational_group(AP_BEARING, AP_LCAP), "Internal error: is_in_rotational_group implementation");  
      
-     module ahpb_rotational_group(group_id, height, r_axle, air_gap, colors, instructions) {   
+     module rotational_group(group_id, height, r_axle, air_gap, colors, instructions) {   
     
         // TODO - handle this as instructions using default values.
         if (group_id == RG_BEARING) {
@@ -621,15 +614,13 @@ module audrey_horizontal_pivot(
 
     if (debug_show_only_rotational_group) {
         r_axle = d_axle/2;
-        ahpb_rotational_group(debug_group_id, height, r_axle, air_gap, colors, attachment_instructions); 
+        rotational_group(debug_group_id, height, r_axle, air_gap, colors, attachment_instructions); 
         
     } else if (debug_show_only_bearing) {
-        ahpb_bearing(height, d_axle, air_gap, colors);
+        bearing(height, d_axle, air_gap, colors);
         
     } else if (debug_show_only_pin) {
         pin(height, d_axle, air_gap, colors);
-    } else if (debug_show_only_sprues) {
-        ahpb_sprues(height, d_axle, air_gap, debug_l_angles, debug_t_angles);
     } else{
         // Default is to show the whole pivot
 
@@ -655,9 +646,9 @@ module audrey_horizontal_pivot(
     r_axle = d_axle/2;
     
     pin(height, d_axle, 0.0, colors);
-    ahpb_bearing(height, d_axle, air_gap, colors);
+    bearing(height, d_axle, air_gap, colors);
     rotate([0, 0, angle_pin]) {
-        ahpb_rotational_group(RG_PIN, height, r_axle, air_gap, colors, attachment_instructions) {
+        rotational_group(RG_PIN, height, r_axle, air_gap, colors, attachment_instructions) {
             // Kludge to avoid implicit union!
             children(0);
             children(1);
@@ -668,7 +659,7 @@ module audrey_horizontal_pivot(
     } 
     rotate([0, 0, angle_bearing]) {
          
-        ahpb_rotational_group(RG_BEARING, height, r_axle, air_gap, colors, attachment_instructions) {
+        rotational_group(RG_BEARING, height, r_axle, air_gap, colors, attachment_instructions) {
             children(0);
             children(1);
             children(2);
