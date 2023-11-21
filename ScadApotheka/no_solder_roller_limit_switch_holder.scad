@@ -169,7 +169,7 @@ translate([160, 0, 0]) {
 }
 
 
-module nsrsh_terminal_side_clamp(roller_is_at_end = false, show_vitamins=false) {
+module nsrsh_terminal_side_clamp(roller_is_at_end = false, show_vitamins=false, switch_depressed=false) {
     center_terminal_offset = roller_is_at_end ? 0.5 : -0.5;
     screw_offsets = [-20, -14, -8, center_terminal_offset, 8];
     screw_lengths = [4, 4, 10, 10, 10];
@@ -178,6 +178,12 @@ module nsrsh_terminal_side_clamp(roller_is_at_end = false, show_vitamins=false) 
     t_mount = [0, rls_base().y/2, rls_base().z/2 + 1.5];
     mounting_base_thickness = 3.1;
     z_extra_base = 2.5;
+    
+    module mounting() {
+        translate(t_mount) block([18, mounting_base_thickness, 8], center=BELOW+RIGHT);   
+        translate(t_mount + [0, -rls_base().y, 6]) block([18, mounting_base_thickness, 14], center=BELOW+LEFT); 
+        translate([0, 0, 12.75]) block([16, rls_base().y, 2.0], center = BELOW);  
+    }
     
     
     module shape() {
@@ -191,8 +197,8 @@ module nsrsh_terminal_side_clamp(roller_is_at_end = false, show_vitamins=false) 
                 color_code=PART_33);
         }
         difference() {
-            translate(t_mount) block([16, mounting_base_thickness, 8], center=BELOW+RIGHT);
-            roller_limit_switch(as_mounting_clearance = true);
+            mounting();
+            rotate([0, 0, 180]) roller_limit_switch(as_mounting_clearance = true);
         }
     }
     

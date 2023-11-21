@@ -14,7 +14,7 @@ module end_of_customization() {}
 
 roller_limit_switch(roller_arm_length=roller_arm_length, switch_depressed=switch_depressed);
 
-
+translate([20, 0, 0]) roller_limit_switch(as_mounting_clearance=true);
 
 function rls_base() = [20, 6.5, 10.5]; // mm
 function rls_prong() = [0.5, 3, 5];
@@ -38,7 +38,13 @@ module roller_limit_switch(roller_arm_length=20, switch_depressed=false, as_moun
     ay_switch = switch_depressed ? 0 : -11.5;
     
     module mounting_clearance() {
-        center_reflect([1, 0, 0]) translate(translation_mount_holes) rod(d=2.5, l=a_lot, center=SIDEWISE);
+        screw_head = 10;
+        center_reflect([1, 0, 0]) translate(translation_mount_holes) {
+            //rod(d=2.5, l=a_lot, center=SIDEWISE);
+            translate([0, rls_base().y/2+2, 0]) rotate([90, 0, 0]) nutcatch_parallel("M2", clh=10);
+            translate([0, -screw_head -rls_base().y/2-2, 0]) rotate([90, 0, 0]) 
+                hole_through("M2", $fn=12, cld=0.4, l=20, h=screw_head);
+        }
     }
     
     if (as_mounting_clearance) {
