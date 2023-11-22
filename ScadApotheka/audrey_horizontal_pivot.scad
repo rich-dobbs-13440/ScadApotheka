@@ -39,7 +39,17 @@ FAQ:
            Since it is designed a horizontal pivot with a barrel configuration, those letters
            are in the name Hepburn.  Audrey is a more recognizably Hepburn name than Katharine.  
            
-           
+2.  Q: What is the design approach to constructing this pivot?
+     A:  A pin is constructed that necks down from the barrel diameter at the ends
+          to the axle diameter in the middle.  
+          
+3.  Q: How is the bearing cavity constructed?
+     A: A radially expanded version of the pin is subtracted from the barrel.  
+        
+ 4. Q: What is the meaning of the air gap?
+     A: It is a radial measure of the distances between the surfaces.  So the 
+          actual distance between the surfaces that are slanted will be less. 
+          This is further complicated by how the slicer handles this.
 
 */
 
@@ -86,7 +96,9 @@ bearing_post_color_t = "OrangeRed"; // ["LightSalmon", "red", "blue", "green", "
 
 height_t = 10; // [0: 0.1 : 20]
 d_axle_t = 2.5; // [0: 0.05 : 6]
-air_gap_t = 0.45; // [0.3: 0.01 : 0.6]
+//air_gap_t = 0.45; // [0.3: 0.01 : 0.6]
+
+air_gap_t = 0.45; // [0.3: 0.05 : 2]
 angle_bearing_t = 0; // [0: 360]
 angle_pin_t = 180; // [0: 360]
 
@@ -128,11 +140,27 @@ if (show_sprues) {
 }
 
 if (show_pin) {
-    audrey_horizontal_pivot(debug_show_only_pin=true, height=height_t, d_axle=d_axle_t, air_gap=0, colors=colors_t()); 
+    // Show the physical pin at origin
+    audrey_horizontal_pivot(
+        debug_show_only_pin=true, height=height_t, d_axle=d_axle_t, air_gap=0.0, colors=colors_t());
+    // Show the physical pin at origin
+    translate([-10, 0, 0]) 
+        audrey_horizontal_pivot(
+            debug_show_only_pin=true, height=height_t, d_axle=d_axle_t, air_gap=0, colors=colors_t()); 
+    // Show the pin cavity
+    translate([-20, 0, 0]) 
+        color("blue", alpha=0.25)
+            audrey_horizontal_pivot(
+                debug_show_only_pin=true, height=height_t, d_axle=d_axle_t, air_gap=air_gap_t, colors=colors_t());  
+    
 }
 
 if (show_bearing) {
-    audrey_horizontal_pivot(debug_show_only_bearing=true, height=height_t, d_axle=d_axle_t, air_gap=air_gap_t, colors=colors_t()); 
+    audrey_horizontal_pivot(
+        debug_show_only_bearing=true, height=height_t, d_axle=d_axle_t, air_gap=air_gap_t, colors=colors_t());     
+     translate([-30, 0, 0]) 
+        audrey_horizontal_pivot(
+            debug_show_only_bearing=true, height=height_t, d_axle=d_axle_t, air_gap=air_gap_t, colors=colors_t()); 
 }
 
 if (show_bearing_rotational_group) {
@@ -191,7 +219,7 @@ module vertical_pivot_with_hand_crafted_mounting_on_side(height, d_axle, air_gap
     dz_t = z_t/2;
     
     d_hdl = 0.8*height;
-    h_hdl = ahpb_r_connector_size(height, d_axle/2);
+    h_hdl = ahpb_r_connector(height, d_axle/2);
     dy_hdl =1*height;
     dz_hdl = d_hdl/2 + 0.2*height;
      
@@ -236,7 +264,7 @@ if (show_mounting_on_top_of_item) {
         angle = 0;
         
         // Detemine the handle mask parameters, so that bearing handle isn't in contact with base plate
-        x_hm = 2*ahpb_r_connector_size(pivot_height, r_axle);
+        x_hm = 2*ahpb_r_connector(pivot_height, r_axle);
         y_hm = 2*ahpb_connector_thickness(pivot_height, r_axle);
         z_hm = r_lcap(pivot_height, r_axle, air_gap);
         dy_hm = y_hm/2 + r_lcap(pivot_height, r_axle, air_gap) - air_gap;
@@ -249,7 +277,7 @@ if (show_mounting_on_top_of_item) {
         
         // Now attach a hande that rests on the build plate.
         d_hdl = pivot_height + plate_thickness;
-        h_hdl = ahpb_r_connector_size(pivot_height, r_axle);
+        h_hdl = ahpb_r_connector(pivot_height, r_axle);
         dy_hdl = r_lcap(pivot_height, r_axle, air_gap) + d_hdl/2; 
         dz_hdl = d_hdl/2 - plate_thickness ;
         translate([0, dy_hdl, dz_hdl]) 
@@ -267,8 +295,8 @@ module  audrey_supports_for_side_attachment_example() {
         
         d_hdl = .7*height;
         r_axle = .3 * height;
-        h_hdl = ahpb_r_connector_size(height, r_axle);
-        dy_hdl = height;
+        h_hdl = ahpb_r_connector(height, r_axle);
+        dy_hdl = 2 * ahpb_r_connector(height, r_axle);
         dz_hdl = d_hdl/2 + 0.15* height;
         translate([0, dy_hdl, dz_hdl]) rotate([0,90,0]) {
             cylinder(d=d_hdl, h=h_hdl, center=true);
@@ -322,8 +350,8 @@ module  audrey_supports_for_side_attachment_example() {
 module  ahpb_fake_handle(pivot_height, d_axle) {
     
     d_hdl = pivot_height;
-    h_hdl = ahpb_r_connector_size(pivot_height, d_axle/2);
-    dy_hdl = 8;
+    h_hdl = ahpb_r_connector(pivot_height, d_axle/2);
+    dy_hdl =2* h_hdl;
     dz_hdl = d_hdl/2 ;
     translate([0, dy_hdl, dz_hdl]) 
     rotate([0,90,0]) cylinder(d=d_hdl, h=h_hdl, center=true); 
@@ -378,8 +406,10 @@ S_H_TCAP = 0.20;
 S_T_TO_HEIGHT = 0; // Scale the thickness with the axle, not height
 S_T_TO_RAXLE = 2;
 
+SCALE_R_CONNECTOR_TO_R_BARREL = 1.2;
 
-function ahpb_r_connector_size(height, r_axle) =  r_axle + S_H_LCONE * height; 
+
+function ahpb_r_connector(height, r_axle) =  SCALE_R_CONNECTOR_TO_R_BARREL *(r_axle + S_H_LCONE * height); 
 
 
 module ahpb_sprues(height, d_axle, air_gap, l_angles, t_angles) {
@@ -394,19 +424,22 @@ module ahpb_sprues(height, d_axle, air_gap, l_angles, t_angles) {
         rotate([0, 0, a]) translate([0, dy, dz]) cylinder(r=air_gap, h=h_sprue, center=true);
     }
     for (a = t_angles) {
-        dz = h_tcap(height) + h_bearing(height) - h_sprue/2;
+        dz = h_tcap(height) + h_bearing_blank(height) - h_sprue/2;
         rotate([0, 0, a]) translate([0, dy, dz]) cylinder(r=air_gap, h=h_sprue, center=true);
     }
 }
 
-function ahpb_r_bearing(height,d_axle) = d_axle/2 + S_H_LCONE * height ;
-function h_lcap(height) = S_H_LCAP * height;
-function h_bearing(height) = h_lcone(height) + h_axle(height) + h_tcone(height);
 
-function r_lcap(height, r_axle, air_gap) =  r_axle + S_H_LCONE * height + air_gap;
-function r_lcone(height, r_axle, air_gap) = r_axle + S_H_LCONE * height + air_gap;
-function r_tcone(height, r_axle, air_gap) = r_axle + S_H_TCONE * height + air_gap;
-function r_tcap(height, r_axle, air_gap) = r_axle + S_H_TCONE * height + air_gap;
+function h_lcap(height) = S_H_LCAP * height;
+function h_bearing_blank(height) = h_lcone(height) + h_axle(height) + h_tcone(height);
+
+function ahpb_r_bearing(height, d_axle) = d_axle/2 + S_H_LCONE * height;
+
+function r_axle(d_axle, air_gap) = d_axle/2 + air_gap;
+function r_lcap(height, d_axle, air_gap) =  d_axle/2 + S_H_LCONE * height + air_gap;
+function r_lcone(height, d_axle, air_gap) = d_axle/2 + S_H_LCONE * height + air_gap;
+function r_tcone(height, d_axle, air_gap) = d_axle/2 + S_H_TCONE * height + air_gap;
+function r_tcap(height, d_axle, air_gap) = d_axle/2 + S_H_TCONE * height + air_gap;
 
 function ahpb_connector_thickness(height, r_axle) = S_T_TO_HEIGHT * height + S_T_TO_RAXLE * r_axle;
 
@@ -434,16 +467,16 @@ module audrey_horizontal_pivot(
     function columns() = [vcf_r1_idx(), vcf_r2_idx(), vcf_h_idx(), vcf_color_idx()];        
         
     module pin(height, d_axle, air_gap, colors=default_colors()) { 
-        function pin_data(s, r_axle, dr, colors) = 
-        [   [ r_lcap(s, r_axle, dr),    r_lcone(s, r_axle, dr), h_lcap(s),  IDX_LCAP_COLOR ],
-            [ r_lcone(s, r_axle, dr),   r_axle,  h_lcone(s), IDX_LCONE_COLOR ],
-            [ r_axle,    r_axle,  h_axle(s),  IDX_AXLE_COLOR ],
-            [ r_axle,    r_tcone(s, r_axle, dr), h_tcone(s), IDX_TCONE_COLOR ],
-            [ r_tcone(s, r_axle, dr),   r_tcap(s, r_axle, dr),  h_tcap(s),  IDX_TCAP_COLOR ],
+        function pin_data(h, d_axle, dr, colors) = 
+        [   [ r_lcap(h, d_axle, dr),    r_lcone(h, d_axle, dr), h_lcap(h),  IDX_LCAP_COLOR ],
+            [ r_lcone(h, d_axle, dr),   r_axle(d_axle, dr),  h_lcone(h), IDX_LCONE_COLOR ],
+            [ r_axle(d_axle, dr),    r_axle(d_axle, dr),  h_axle(h),  IDX_AXLE_COLOR ],
+            [ r_axle(d_axle, dr),    r_tcone(h, d_axle, dr), h_tcone(h), IDX_TCONE_COLOR ],
+            [ r_tcone(h, d_axle, dr),   r_tcap(h, d_axle, dr),  h_tcap(h),  IDX_TCAP_COLOR ],
         ];
         
-        data = pin_data(height, d_axle/2, air_gap);
-        * echo("In pin module: size", size, "air_gap", air_gap, "pin data", data);
+        data = pin_data(height, d_axle, air_gap);
+        *echo("In pin module: size", height, "air_gap", air_gap, "pin data", data);
         * echo("Sample pin data for cavity", pin_data(size_t, d_axle/2, 0.0));
 
         v_conic_frustrum(
@@ -456,10 +489,13 @@ module audrey_horizontal_pivot(
         
         bearing_color = colors[IDX_BEARING_COLOR];
         r = ahpb_r_bearing(height, d_axle);
-        dz = h_lcap(height) + h_bearing(height)/2;
+        dz = h_lcap(height) + h_bearing_blank(height)/2;
         color(bearing_color, alpha=0.35) {
             difference() {
-                translate([0,0,dz]) cylinder(h=h_bearing(height), r=r, center=true);
+                translate([0,0,dz]) 
+                    cylinder(
+                        h=h_bearing_blank(height), 
+                        r=ahpb_r_bearing(height, d_axle), center=true);
                 pin(height, d_axle, air_gap, colors); 
             }
         } 
@@ -467,27 +503,31 @@ module audrey_horizontal_pivot(
 
     
     module bearing_join(height, r_axle, air_gap, colors) {
+        rb = ahpb_r_bearing(height, 2*r_axle);
         x = ahpb_connector_thickness(height, r_axle);
-        y = ahpb_r_connector_size(height, r_axle) + ahpb_r_bearing(height, 2*r_axle);
-        z = h_bearing(height) - 2*air_gap;
+        y = ahpb_r_connector(height, r_axle);
+        z = 0.9 * h_bearing_blank(height) - 2 * sqrt(2) * air_gap;
+        // Offset because cube is centered
         dy = y/2;
-        dz = z / 2 + h_lcap(height) + air_gap;
+        dz = h_lcap(height)  + h_bearing_blank(height)/ 2;
         color(colors[IDX_BEARING_JOIN_COLOR]) {
-            difference() {
-                translate([0, dy, dz]) cube([x, y, z], center=true);
-                cylinder(r=ahpb_r_bearing(height, 2*r_axle), h=a_lot, center=true);
+            hull() {
+                difference() {
+                    translate([0, dy, dz]) cube([x, y, z], center=true);
+                    cylinder(r=ahpb_r_bearing(height, 2*r_axle), h=a_lot, center=true);
+                }
             }
         }
     }      
     
     module l_cap_join(height, r_axle, colors) {
         x = ahpb_connector_thickness(height, r_axle);
-        y = ahpb_r_connector_size(height, r_axle) + ahpb_r_bearing(height, 2*r_axle);
+        y = ahpb_r_connector(height, r_axle);
         z = h_lcap(height);
         dy = y/2;
         dz = z / 2;   
         color(colors[IDX_LCAP_JOIN_COLOR]) {
-            difference() {
+            render() difference() {
                 translate([0, dy, dz]) cube([x, y, z], center=true);
                 pin(height, 2*r_axle, 0);
             } 
@@ -496,12 +536,12 @@ module audrey_horizontal_pivot(
     
     module t_cap_join(height, r_axle, colors) {
         x = ahpb_connector_thickness(height, r_axle);
-        y = ahpb_r_connector_size(height, r_axle) + ahpb_r_bearing(height, 2*r_axle);
+        y = ahpb_r_connector(height, r_axle);
         z = h_tcap(height);
         dy = y/2;
         dz = height - z / 2;   
         color(colors[IDX_TCAP_JOIN_COLOR]) {
-            difference() {
+            render() difference() {
                 translate([0, dy, dz]) cube([x, y, z], center=true);
                 pin(height, 2*r_axle, 0);
             } 
@@ -512,7 +552,7 @@ module audrey_horizontal_pivot(
         module attachment_target(connector_id, height, r_axle, air_gap, colors) {
             module connector_post(height, r_axle, air_gap, positive_offset) {
                 x = ahpb_connector_thickness(height, r_axle);
-                y = ahpb_r_connector_size(height, r_axle) + r_tcone(height, r_axle, 0);
+                y = ahpb_r_connector(height, r_axle) + r_tcone(height, r_axle, 0);
                 z =height;
                 dy = (positive_offset ? 1: -1) * y/2;
                 dz = z / 2;
@@ -619,10 +659,9 @@ module audrey_horizontal_pivot(
         
     } else if (debug_show_only_bearing) {
         bearing(height, d_axle, air_gap, colors);
-        
     } else if (debug_show_only_pin) {
         pin(height, d_axle, air_gap, colors);
-    } else{
+    } else {
         // Default is to show the whole pivot
 
         assert(!is_undef(height), "You must specify height");
@@ -642,33 +681,35 @@ module audrey_horizontal_pivot(
         * echo("angle_cap = ", angle_cap);
         * echo("colors", colors);
         * echo("attachment_instructions", attachment_instructions);
-    }
+
     
-    r_axle = d_axle/2;
-    
-    pin(height, d_axle, 0.0, colors);
-    bearing(height, d_axle, air_gap, colors);
-    rotate([0, 0, angle_pin]) {
-        rotational_group(RG_PIN, height, r_axle, air_gap, colors, attachment_instructions) {
-            // Kludge to avoid implicit union!
-            children(0);
-            children(1);
-            children(2);
-            children(3);
-            children(4);
+        r_axle = d_axle/2;
+        
+        // The physical pin is the one with no padded air gap:
+        pin(height, d_axle, 0.0, colors);
+        bearing(height, d_axle, air_gap, colors);
+        rotate([0, 0, angle_pin]) {
+            rotational_group(RG_PIN, height, r_axle, air_gap, colors, attachment_instructions) {
+                // Kludge to avoid implicit union!
+                children(0);
+                children(1);
+                children(2);
+                children(3);
+                children(4);
+            }
+        } 
+        rotate([0, 0, angle_bearing]) {
+             
+            rotational_group(RG_BEARING, height, r_axle, air_gap, colors, attachment_instructions) {
+                children(0);
+                children(1);
+                children(2);
+                children(3);
+                children(4);
+            }
         }
-    } 
-    rotate([0, 0, angle_bearing]) {
-         
-        rotational_group(RG_BEARING, height, r_axle, air_gap, colors, attachment_instructions) {
-            children(0);
-            children(1);
-            children(2);
-            children(3);
-            children(4);
-        }
+        * echo("Exit pivot module");
     }
-    * echo("Exit pivot module");
 }
 
 
