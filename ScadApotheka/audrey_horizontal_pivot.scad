@@ -237,7 +237,7 @@ if (show_mounting_on_top_of_item) {
         
         // Detemine the handle mask parameters, so that bearing handle isn't in contact with base plate
         x_hm = 2*ahpb_r_connector_size(pivot_height, r_axle);
-        y_hm = 2*t_connector_size(pivot_height);
+        y_hm = 2*ahpb_connector_thickness(pivot_height, r_axle);
         z_hm = r_lcap(pivot_height, r_axle, air_gap);
         dy_hm = y_hm/2 + r_lcap(pivot_height, r_axle, air_gap) - air_gap;
         dz_hm = z_hm/2;
@@ -375,7 +375,8 @@ S_H_AXLE = 0.20;
 S_H_TCONE = 0.20;
 S_H_TCAP = 0.20;
 
-T_CONNECTOR_SIZE = 0.25;
+S_T_TO_HEIGHT = 0; // Scale the thickness with the axle, not height
+S_T_TO_RAXLE = 2;
 
 
 function ahpb_r_connector_size(height, r_axle) =  r_axle + S_H_LCONE * height; 
@@ -407,7 +408,7 @@ function r_lcone(height, r_axle, air_gap) = r_axle + S_H_LCONE * height + air_ga
 function r_tcone(height, r_axle, air_gap) = r_axle + S_H_TCONE * height + air_gap;
 function r_tcap(height, r_axle, air_gap) = r_axle + S_H_TCONE * height + air_gap;
 
-function t_connector_size(height) = T_CONNECTOR_SIZE * height;
+function ahpb_connector_thickness(height, r_axle) = S_T_TO_HEIGHT * height + S_T_TO_RAXLE * r_axle;
 
 
 function h_lcone(height) = S_H_LCONE * height;
@@ -465,12 +466,12 @@ module audrey_horizontal_pivot(
     }  
 
     
-    module bearing_join(height, r_axle, colors) {
-        x = t_connector_size(height);
+    module bearing_join(height, r_axle, air_gap, colors) {
+        x = ahpb_connector_thickness(height, r_axle);
         y = ahpb_r_connector_size(height, r_axle) + ahpb_r_bearing(height, 2*r_axle);
-        z = h_bearing(height);
+        z = h_bearing(height) - 2*air_gap;
         dy = y/2;
-        dz = z / 2 + h_lcap(height);
+        dz = z / 2 + h_lcap(height) + air_gap;
         color(colors[IDX_BEARING_JOIN_COLOR]) {
             difference() {
                 translate([0, dy, dz]) cube([x, y, z], center=true);
@@ -480,7 +481,7 @@ module audrey_horizontal_pivot(
     }      
     
     module l_cap_join(height, r_axle, colors) {
-        x = t_connector_size(height);
+        x = ahpb_connector_thickness(height, r_axle);
         y = ahpb_r_connector_size(height, r_axle) + ahpb_r_bearing(height, 2*r_axle);
         z = h_lcap(height);
         dy = y/2;
@@ -494,7 +495,7 @@ module audrey_horizontal_pivot(
     }    
     
     module t_cap_join(height, r_axle, colors) {
-        x = t_connector_size(height);
+        x = ahpb_connector_thickness(height, r_axle);
         y = ahpb_r_connector_size(height, r_axle) + ahpb_r_bearing(height, 2*r_axle);
         z = h_tcap(height);
         dy = y/2;
@@ -510,7 +511,7 @@ module audrey_horizontal_pivot(
      module attach(attachment_point_id, height, r_axle, air_gap, colors, instruction) {
         module attachment_target(connector_id, height, r_axle, air_gap, colors) {
             module connector_post(height, r_axle, air_gap, positive_offset) {
-                x = t_connector_size(height);
+                x = ahpb_connector_thickness(height, r_axle);
                 y = ahpb_r_connector_size(height, r_axle) + r_tcone(height, r_axle, 0);
                 z =height;
                 dy = (positive_offset ? 1: -1) * y/2;
@@ -525,7 +526,7 @@ module audrey_horizontal_pivot(
             }    
             
             if (connector_id == AP_BEARING) {
-                bearing_join(height, r_axle, colors);
+                bearing_join(height, r_axle, air_gap, colors);
             } 
             if (connector_id == AP_CAP_YOKE) {
                 connector_post(height, r_axle, air_gap, positive_offset= true); 
@@ -584,7 +585,7 @@ module audrey_horizontal_pivot(
     
         // TODO - handle this as instructions using default values.
         if (group_id == RG_BEARING) {
-            bearing_join(height, r_axle, colors);  
+            bearing_join(height, r_axle, air_gap, colors);  
         } 
         if (group_id == RG_PIN) {
             // TODO:  add this as default as an attachment!
