@@ -26,6 +26,7 @@ dy_servo_block = 0.25;
 
 dx_holes = (1.23 - 0.13) * 25.4;
 dy_holes = (0.88/2 - 0.13) * 25.4;
+screw_terminal = [7.4, 8.0, 8.7];
 
 module end_of_customization() {}
 
@@ -41,9 +42,9 @@ module board_mounting_screws(as_clearance = false, as_board_clearance = false, d
     center_reflect([1, 0, 0]) center_reflect([0, 1, 0]) {
         translate([dx_holes, dy_holes, board.z]) {
             if (as_clearance) {
-                hole_through("M2", $fn=12);
+                translate([0, 0, 25]) hole_through("M2", $fn=12);
             } else if (as_board_clearance) {
-                hole_through("M2.5", $fn=12);
+                translate([0, 0, 25]) hole_through("M2.5", $fn=12);
             } else {
                 color(BLACK_IRON) screw("M2x6", $fn=12);
             }
@@ -53,6 +54,7 @@ module board_mounting_screws(as_clearance = false, as_board_clearance = false, d
 
 
 module board() {
+    
     color("#003366") {
         render(convexity = 10) difference() {
             block(board, center=ABOVE);
@@ -60,6 +62,9 @@ module board() {
         }
     }
     board_mounting_screws(as_clearance = false);
+    color("#7dd57f") {
+        translate([0, board.y/2, board.z]) block(screw_terminal, center = ABOVE+LEFT);
+    }
 }
 
 module pca9685_slide_rail_mount(
@@ -67,28 +72,62 @@ module pca9685_slide_rail_mount(
         dy_holes=dy_holes, 
         dz_extra_under_board = 0,
         center=CENTER, 
-        slide_from_left = false, 
         show_vitamins=true) {
+            
     module servo_block_clearance() {
         y_rail_wall = 2;
-        dx = slide_from_left ? -5 : 5;
+        dx = 0;
         dz = 6;
-        dy = board.y/2 - dy_servo_block;
-        translate([dx, dy, dz]) block(servo_block + [10, 0, 0], center = ABOVE+LEFT); 
+        dy = -board.y/2 - dy_servo_block;
+        translate([dx, dy, dz]) block(servo_block + [2, 0, 0], center = ABOVE+RIGHT); 
+    }
+    module screw_terminal_strain_relief(as_clearance=false) {
+        if (as_clearance) {
+            translate([0, board.y/2, 6]) {
+                block([15, 8, 6], center=ABOVE);
+            }
+        } else {
+            translate([0, board.y/2 + y_clearance, 0]) {
+                difference() {
+                    color("brown") {
+                        block([0.4, 8, 12], center=ABOVE+RIGHT);
+                        block([15, 8, 8], center=ABOVE+RIGHT);
+                    }
+                    center_reflect([1, 0, 0]) translate([5, 5, 0]) {
+                        translate([0, 0, 25]) hole_through("M2", $fn=12);
+                        translate([0, 0, 4])  nutcatch_sidecut(
+                                                            "M2",
+                                                            clk    =  0.5,  // key width clearance
+                                                            clh    =  0.5  // height clearance
+                                                        );
+                    }
+                }
+            }
+        }
     }
     module shape() {
-        slide_rail_pcb_mount(board, y_clearance, z_clearance, dz_extra_under_board=dz_extra_under_board, show_vitamins=show_vitamins) {
+        slide_rail_pcb_mount(
+                board, 
+                y_clearance,    
+                z_clearance, 
+                dz_extra_under_board=dz_extra_under_board, 
+                breadboard_clip = true,
+                mounting_screw_locations = [[15, 0, 0]],
+                show_vitamins=show_vitamins) {
             board();
             union() {
             }
             union() {
                 servo_block_clearance();
                 board_mounting_screws(as_clearance = true, dx_holes=dx_holes, dy_holes=dy_holes);
+                screw_terminal_strain_relief(as_clearance=true);
                 if (fit_test) {
-                    translate([board.x/2 - 10, 0, 0]) plane_clearance(BEHIND);
+                    translate([-board.x/2 + 10, 0, 0]) plane_clearance(FRONT);
                 }
             }
         }
+        screw_terminal_strain_relief();
+        
     }
     translation = 
         center == CENTER ? [0, 0, 0] : 

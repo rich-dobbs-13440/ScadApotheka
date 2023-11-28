@@ -553,13 +553,13 @@ module audrey_horizontal_pivot(
             module connector_post(height, r_axle, air_gap, positive_offset) {
                 x = ahpb_connector_thickness(height, r_axle);
                 y = ahpb_r_connector(height, r_axle) + r_tcone(height, r_axle, 0);
-                z =height;
+                z = height;
                 dy = (positive_offset ? 1: -1) * y/2;
                 dz = z / 2;
                 h_clearance = 3 * height;
-                r_clearance = r_tcone(height, r_axle, air_gap);
+                r_clearance = r_tcone(height, r_axle, 3*air_gap);
                 
-                difference() { 
+                render() difference() { 
                     translate([0, dy, dz]) cube([x, y, z], center=true);
                     cylinder(r=r_clearance, h=h_clearance, center=true);
                 }
