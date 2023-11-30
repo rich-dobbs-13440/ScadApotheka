@@ -1,6 +1,4 @@
-include <centerable.scad>
-use <not_included_batteries.scad>
-use <shapes.scad>
+include <ScadStoicheia/centerable.scad>
 
 
 module end_of_customization() {}
