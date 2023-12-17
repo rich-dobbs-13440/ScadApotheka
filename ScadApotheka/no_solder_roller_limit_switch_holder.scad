@@ -169,7 +169,11 @@ translate([160, 0, 0]) {
 }
 
 
-module nsrsh_terminal_side_clamp(roller_is_at_end = false, show_vitamins=false, switch_depressed=false) {
+module nsrsh_terminal_side_clamp(
+        back_plate_mount = true,
+        roller_is_at_end = false, 
+        show_vitamins=false, 
+        switch_depressed=false) {
     center_terminal_offset = roller_is_at_end ? 0.5 : -0.5;
     screw_offsets = [-20, -14, -8, center_terminal_offset, 8];
     screw_lengths = [4, 4, 10, 10, 10];
@@ -180,8 +184,10 @@ module nsrsh_terminal_side_clamp(roller_is_at_end = false, show_vitamins=false, 
     z_extra_base = 2.5;
     
     module mounting() {
-        translate(t_mount) block([18, mounting_base_thickness, 8], center=BELOW+RIGHT);   
-        translate(t_mount + [0, -rls_base().y, 6]) block([18, mounting_base_thickness, 14], center=BELOW+LEFT); 
+        translate(t_mount) block([18, mounting_base_thickness, 8], center=BELOW+RIGHT);
+        if (back_plate_mount) {
+            translate(t_mount + [0, -rls_base().y, 6]) block([18, mounting_base_thickness, 14], center=BELOW+LEFT); 
+        }
         translate([0, 0, 12.75]) block([16, rls_base().y, 2.0], center = BELOW);  
     }
     
@@ -338,14 +344,21 @@ module nsrsh_adjustable_mount(
 }
 
 
-module nsrsh_adjuster(show_vitamins=true, screw_length=20, slide_length=10, dz_adjuster_screw = 3.5) {
+module nsrsh_adjuster(
+        show_vitamins=true, 
+        screw_length=20, 
+        slide_length=10, 
+        dz_adjuster_screw = 3.5, 
+        z_mounting_plate_extra = 5,
+        print_from_switch=false) {
     limit_switch = rls_base();
     dz_slide = dz_adjuster_screw -5;
     screw_translation = [0, dy_adjuster_screw, dz_adjuster_screw];
     module mount_and_rails(dz_slide, slide_length) {
-
-        mounting_plate = [limit_switch.x, adjuster_plate_thickness, limit_switch.z/2];
         slide_body =  [limit_switch.x, 8, slide_length];
+        mounting_plate = 
+            print_from_switch ? [limit_switch.x, adjuster_plate_thickness, limit_switch.z/2] :
+            [limit_switch.x, slide_body.y, limit_switch.z/2 + z_mounting_plate_extra];
         translate([0, 0, 1])  block(mounting_plate,  center= ABOVE + LEFT);        
         render(convexity=10) difference() {
             translate([0, 0, dz_adjuster_screw])  block(slide_body, center = BELOW + LEFT);
@@ -611,7 +624,7 @@ module nsrsh_terminal_end_clamp(
                         }
                     }
                 } else if (as_terminal_block_blank) {
-                   # translate([0, 0, -screw_length + 0.5]) block([6, 6, 6], center=ABOVE);          
+                    translate([0, 0, -screw_length + 0.5]) block([6, 6, 6], center=ABOVE);          
                 } else {
                     color(STAINLESS_STEEL) {
                         translate([0, 0, -0.]) screw(screw_name, $fn=12);
