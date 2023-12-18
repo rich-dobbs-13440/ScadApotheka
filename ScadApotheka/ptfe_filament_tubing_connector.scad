@@ -67,6 +67,8 @@ show_collet_nut = true;
 show_union = true;
 show_sample_key_hole = true;
 show_filament_path = true;
+show_bare_clamp = true;
+show_long_radius_wye = true;
 is_filament_entrance = true;
 
 
@@ -171,6 +173,14 @@ if (show_filament_path) {
     translate([100, 0, 0])  flute_filament_path(is_entrance=is_filament_entrance);
 }
 
+if (show_bare_clamp) {
+    translate([120, 0, 0])  flute_bare_clamp();
+}
+
+if (show_long_radius_wye) {
+    translate([120, 0, 0])  flute_long_radius_wye();
+}
+
 
 function flute_clamp_connector() = 
     quarter_turn_connector(
@@ -200,6 +210,93 @@ module flute_barbed_tubing_clearance() {
     }
 }
 
+
+module flute_long_radius_wye() {
+
+    module blank(r_long_radius, ay, dz_straight, z_straight) {
+        translate([0, 0, 0]) flute_bare_clamp(z_neck=5); 
+        translate([0, 0, dz_straight]) rotate([180, 0, 0]) flute_bare_clamp(z_neck=z_straight);
+    }
+    module side_connection(r_long_radius, ay, dz, as_mounting_target = false, as_clearance = false) {
+        translate([r_long_radius, 0, dz]) { 
+            if (as_clearance) {                
+                    rotate([0, 180, 0]) rotate([-90, 0, 0]) rotate_extrude(angle = ay, convexity = 2, $fn=100) {
+                        translate([r_long_radius, 0, 0]) {
+                            hull() {
+                                circle(d = 2.5, $fn=12);
+                                 square(size=[0.1, 1.5]);
+                            }
+                        }
+                    }
+            } else {
+                difference() {
+                    rotate([0, 180, 0]) rotate([-90, 0, 0]) rotate_extrude(angle = ay, convexity = 2, $fn=100) {
+                        translate([r_long_radius - x_neck_connector/2, -y_clamp/2]) {
+                            square(size=[x_neck_connector, y_clamp]);
+                        }
+                    }
+                    translate([-r_long_radius, 0, 0]) plane_clearance(BEHIND);
+                }
+                rotate([0, ay, 0]) {
+                    translate([-r_long_radius, 0, z_connector + 5])  {
+                        rotate([0, 180, 0]) {
+                            difference() {
+                                #flute_bare_clamp(z_neck=5.2); 
+                                if (as_mounting_target) {
+                                    translate([0, 0, z_connector+5]) plane_clearance(BELOW);
+                                }
+                            }
+                        }
+                   }
+                }
+            }
+        }
+    }
+    ay = 27;        
+    r_long_radius = 60;
+    dz_straight = 73;
+    z_straight = dz_straight - 2 * z_connector - 4;        
+    render(convexity=10) difference() {
+        union() {
+            blank(r_long_radius = r_long_radius, ay = ay, dz_straight = dz_straight, z_straight = z_straight);
+            side_connection(r_long_radius, ay, dz = 5, as_mounting_target = false, as_clearance = false);
+            side_connection(r_long_radius, ay, dz = 30, as_mounting_target = false, as_clearance = false);
+        }
+        #side_connection(r_long_radius, ay, dz = 5, as_mounting_target = false, as_clearance = true);
+        #side_connection(r_long_radius, ay, dz = 30, as_mounting_target = false, as_clearance = true);
+    }
+}
+
+
+module flute_bare_clamp(as_clearance=false, drilled_out=true, z_neck = 5) {
+    clamp = flute_clamp_connector();
+    null_connector =     
+        quarter_turn_connector(
+            [0, 0, 0],
+            [x_clearance, y_clearance, z_clearance],
+            [x_slot_clamp, -1, z_slot_clamp],
+            [x_neck_clamp, y_connector, z_neck],
+            [dx_squeeze_clamp, -1, -1],
+            aspect_ratio_tuning);
+    
+    module cavity() {
+        modified_filament_clearance = filament_clearance + (drilled_out ? 0.25 : 0);
+        flute_barbed_tubing_clearance();
+        translate([0, 0, z_clamp + core_length + z_neck])  
+            flute_filament_path(is_entrance = false, multiplier = 1, modified_filament_clearance, teardrop=true);
+        
+    }
+    if (as_clearance) {
+        quarter_turn_clamping_connector_key(core_length,  clamp, null_connector);
+        cavity();        
+    } else {
+        render(convexity=10) difference() {
+            quarter_turn_clamping_connector_key(core_length,  clamp, null_connector);
+            cavity();
+        }
+    }
+}
+
 module flute_collet(is_filament_entrance=true, as_clearance=false, entrance_multiplier=5) {
     clamp = flute_clamp_connector();
     connector = flute_connector();
@@ -222,16 +319,26 @@ module flute_collet(is_filament_entrance=true, as_clearance=false, entrance_mult
     }
 }
 
-module flute_filament_path(is_entrance=true, multiplier = 5, include_below = true) {
+module flute_filament_path(
+        is_entrance=true, 
+        multiplier = 5, 
+        include_below = true, 
+        filament_clearance=filament_clearance, 
+        teardrop=false) {
     module filament_exit() {
         can(d=d_filament+ 2*filament_clearance, h = z_connector*multiplier, center = ABOVE);
     }    
-    module filament_entrance() {
-            can(d=d_filament + 2*filament_clearance, taper=entrance_diameter*multiplier,  h = z_connector*multiplier,  center=ABOVE);
-            
+    module filament_entrance(teardrop=false) {
+        can(d=d_filament + 2*filament_clearance, taper=entrance_diameter*multiplier,  h = z_connector*multiplier,  center=ABOVE);
+        if (teardrop) {
+            hull() {
+                can(d=d_filament + 2*filament_clearance, h=a_lot);
+                block([0.01, d_filament/2 + filament_clearance + 0.2, a_lot], center=RIGHT); 
+            }
+        }        
     }    
     if (is_entrance) {
-        filament_entrance();
+        filament_entrance(teardrop=teardrop);
     } else {
         filament_exit(); 
     }
