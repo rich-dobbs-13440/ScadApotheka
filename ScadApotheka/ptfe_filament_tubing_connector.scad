@@ -60,7 +60,8 @@ d_filament = 1.75 + 0;
 a_lot = 100 + 0;
 
 /* [Example] */
-show_assembled = false;
+orient_for_printing = true;
+show_cross_section = true;
 
 show_collet = true;
 show_collet_nut = true;
@@ -93,45 +94,48 @@ key_clearance = 0.5;
 aspect_ratio_tuning = 1;
 
 /* [PTFE Tubing Core Dimensions] */
-core_length = 0.1;
+    core_length = 0.1;
 
 /* [PTFE Clamp Dimensions] */ 
 
-entrance_diameter = 4.2;
+    entrance_diameter = 4.2;
 
-x_clamp = 10;
-y_clamp = 6; 
-z_clamp = 8;
-x_neck_clamp = 6;
-x_slot_clamp = 1;
-z_slot_clamp = 5;
+    x_clamp = 12;
+    y_clamp = 6; 
+    z_clamp = 10;
+    x_neck_clamp = 8;
+    x_slot_clamp = 1;
+    z_slot_clamp = 8;
 // Tune if necessary to hold tube
-dx_squeeze_clamp = 1.5; // [0:0.25:3]  
-barb_spacing = 2;
-barb_bite = 0.5;
+    dx_squeeze_clamp = 1.5; // [0:0.25:3]  
+    barb_spacing = 2;
+    barb_bite = 0.5;
 
 /* [PTFE Connector Dimensions] */ 
 
-x_connector = 10;
-y_connector = 6;
-z_connector = 8;
-x_neck_connector = 6;
-x_slot_connector = 0.5;
-z_slot_connector = 3;
+    x_connector = 10;
+    y_connector = 6;
+    z_connector = 10;
+    x_neck_connector = 8;
+    x_slot_connector = 0.5;
+    z_slot_connector = 3;
 
 // Tune if necessary to hold connector in keyhole
-dx_squeeze_connector = 1.5;  
+    dx_squeeze_connector = 1.5;  
 
 /* [PTFE Tubing Nut Dimensions] */
 
-nut_wall = 1;
-h_nut = 6;
-h_nut_base = 1.;
-nut_sides = 4; //[4, 6]
+    nut_wall = 1;
+    h_nut = 6;
+    h_nut_base = 1.;
+    nut_sides = 4; //[4, 6]
 
 /* [Dimensions] */
-h_union_core = 4;
-union_sides = 4; //[4, 6]
+    h_union_core = 4;
+    union_sides = 4; //[4, 6]
+
+/* [Double Wye Design] */
+    ay_double_wye = 33; 
 
 module end_of_customization() { }
 
@@ -220,7 +224,7 @@ module flute_long_radius_wye() {
     module side_connection(r_long_radius, ay, dz, as_mounting_target = false, as_clearance = false) {
         translate([r_long_radius, 0, dz]) { 
             if (as_clearance) {                
-                    rotate([0, 180, 0]) rotate([-90, 0, 0]) rotate_extrude(angle = ay, convexity = 2, $fn=100) {
+                    rotate([0, 180, 0]) rotate([-90, 0, 0]) rotate_extrude(angle = ay+0.1, convexity = 2, $fn=100) {
                         translate([r_long_radius, 0, 0]) {
                             hull() {
                                 circle(d = 2.5, $fn=12);
@@ -235,13 +239,13 @@ module flute_long_radius_wye() {
                             square(size=[x_neck_connector, y_clamp]);
                         }
                     }
-                    translate([-r_long_radius, 0, 0]) plane_clearance(BEHIND);
+                    translate([-r_long_radius + x_neck_connector/2 -0.1, 0, 0]) plane_clearance(BEHIND);
                 }
                 rotate([0, ay, 0]) {
                     translate([-r_long_radius, 0, z_connector + 5])  {
                         rotate([0, 180, 0]) {
                             difference() {
-                                #flute_bare_clamp(z_neck=5.2); 
+                                flute_bare_clamp(z_neck=5.2); 
                                 if (as_mounting_target) {
                                     translate([0, 0, z_connector+5]) plane_clearance(BELOW);
                                 }
@@ -252,18 +256,28 @@ module flute_long_radius_wye() {
             }
         }
     }
-    ay = 27;        
+  
+    dz_printing = y_connector/2; 
     r_long_radius = 60;
-    dz_straight = 73;
-    z_straight = dz_straight - 2 * z_connector - 4;        
-    render(convexity=10) difference() {
-        union() {
-            blank(r_long_radius = r_long_radius, ay = ay, dz_straight = dz_straight, z_straight = z_straight);
-            side_connection(r_long_radius, ay, dz = 5, as_mounting_target = false, as_clearance = false);
-            side_connection(r_long_radius, ay, dz = 30, as_mounting_target = false, as_clearance = false);
+    dz_straight = 76;
+    z_straight = dz_straight - 2 * z_connector-4;
+    translation = orient_for_printing ? [0, 0, dz_printing] : [0, 0, 0];
+    rotation = orient_for_printing ? [90, 0, 0] : [0, 0, 0];
+    translate(translation) rotate(rotation) {
+        render(convexity=10) difference() {
+            union() {
+                blank(r_long_radius = r_long_radius, ay = ay_double_wye, dz_straight = dz_straight, z_straight = z_straight);
+                
+                side_connection(r_long_radius, ay_double_wye, dz = 5, as_mounting_target = false, as_clearance = false);
+                side_connection(r_long_radius, ay_double_wye, dz = 30, as_mounting_target = false, as_clearance = false);
+            }
+            translate([0, 0, dz_straight]) rotate([0, 0, 0]) flute_bare_clamp(as_clearance = true, z_neck=0);
+            side_connection(r_long_radius, ay_double_wye, dz = 5, as_mounting_target = false, as_clearance = true);
+            side_connection(r_long_radius, ay_double_wye, dz = 30, as_mounting_target = false, as_clearance = true);
+            if (show_cross_section) {
+                plane_clearance(RIGHT);
+            }
         }
-        #side_connection(r_long_radius, ay, dz = 5, as_mounting_target = false, as_clearance = true);
-        #side_connection(r_long_radius, ay, dz = 30, as_mounting_target = false, as_clearance = true);
     }
 }
 
