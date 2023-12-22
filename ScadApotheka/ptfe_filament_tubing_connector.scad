@@ -62,6 +62,7 @@ a_lot = 100 + 0;
 /* [Example] */
 orient_for_printing = true;
 show_cross_section = true;
+show_assembled = true;
 
 show_collet = true;
 show_collet_nut = true;
@@ -102,10 +103,10 @@ aspect_ratio_tuning = 1;
 
     x_clamp = 12;
     y_clamp = 6; 
-    z_clamp = 10;
+    z_clamp = 12;
     x_neck_clamp = 8;
     x_slot_clamp = 1;
-    z_slot_clamp = 8;
+    z_slot_clamp =12;
 // Tune if necessary to hold tube
     dx_squeeze_clamp = 1.5; // [0:0.25:3]  
     barb_spacing = 2;
@@ -125,7 +126,7 @@ aspect_ratio_tuning = 1;
 
 /* [PTFE Tubing Nut Dimensions] */
 
-    nut_wall = 1;
+    nut_wall = 2;
     h_nut = 6;
     h_nut_base = 1.;
     nut_sides = 4; //[4, 6]
@@ -135,7 +136,10 @@ aspect_ratio_tuning = 1;
     union_sides = 4; //[4, 6]
 
 /* [Double Wye Design] */
-    ay_double_wye = 33; 
+    ay_double_wye = 40; 
+    ay_side_start_double_wye =25;
+    r_long_radius_wye = 60;
+    dz_straight_double_wye = 78;    
 
 module end_of_customization() { }
 
@@ -221,10 +225,11 @@ module flute_long_radius_wye() {
         translate([0, 0, 0]) flute_bare_clamp(z_neck=5); 
         translate([0, 0, dz_straight]) rotate([180, 0, 0]) flute_bare_clamp(z_neck=z_straight);
     }
-    module side_connection(r_long_radius, ay, dz, as_mounting_target = false, as_clearance = false) {
+    module side_connection(r_long_radius, ay, dz, as_clearance = false) {
         translate([r_long_radius, 0, dz]) { 
             if (as_clearance) {                
-                    rotate([0, 180, 0]) rotate([-90, 0, 0]) rotate_extrude(angle = ay+0.1, convexity = 2, $fn=100) {
+                rotate([0, 180, 0]) rotate([-90, 0, 0]) {
+                    rotate_extrude(angle = ay+0.1, convexity = 2, $fn=100) {
                         translate([r_long_radius, 0, 0]) {
                             hull() {
                                 circle(d = 2.5, $fn=12);
@@ -232,6 +237,18 @@ module flute_long_radius_wye() {
                             }
                         }
                     }
+                }
+                
+                rotate([0, 180 + ay_side_start_double_wye, 0]) rotate([-90, 0, 0]) {
+                    rotate_extrude(angle = ay - ay_side_start_double_wye + 0.1, convexity = 2, $fn=100) {
+                        translate([r_long_radius, 0, 0]) {
+                            hull() {
+                                circle(d = 4, $fn=12);
+                                 translate([0, 0.5]) square(size=[0.1, 2]);
+                            }
+                        }
+                    }
+                }
             } else {
                 difference() {
                     rotate([0, 180, 0]) rotate([-90, 0, 0]) rotate_extrude(angle = ay, convexity = 2, $fn=100) {
@@ -242,14 +259,9 @@ module flute_long_radius_wye() {
                     translate([-r_long_radius + x_neck_connector/2 -0.1, 0, 0]) plane_clearance(BEHIND);
                 }
                 rotate([0, ay, 0]) {
-                    translate([-r_long_radius, 0, z_connector + 5])  {
+                    translate([-r_long_radius, 0, z_clamp])  {
                         rotate([0, 180, 0]) {
-                            difference() {
-                                flute_bare_clamp(z_neck=5.2); 
-                                if (as_mounting_target) {
-                                    translate([0, 0, z_connector+5]) plane_clearance(BELOW);
-                                }
-                            }
+                            flute_bare_clamp(z_neck=0.1); 
                         }
                    }
                 }
@@ -258,22 +270,25 @@ module flute_long_radius_wye() {
     }
   
     dz_printing = y_connector/2; 
-    r_long_radius = 60;
-    dz_straight = 76;
-    z_straight = dz_straight - 2 * z_connector-4;
+    z_straight = dz_straight_double_wye - 2 * z_connector-4;
     translation = orient_for_printing ? [0, 0, dz_printing] : [0, 0, 0];
     rotation = orient_for_printing ? [90, 0, 0] : [0, 0, 0];
     translate(translation) rotate(rotation) {
         render(convexity=10) difference() {
             union() {
-                blank(r_long_radius = r_long_radius, ay = ay_double_wye, dz_straight = dz_straight, z_straight = z_straight);
-                
-                side_connection(r_long_radius, ay_double_wye, dz = 5, as_mounting_target = false, as_clearance = false);
-                side_connection(r_long_radius, ay_double_wye, dz = 30, as_mounting_target = false, as_clearance = false);
+                blank(
+                    r_long_radius = r_long_radius_wye, 
+                    ay = ay_double_wye, 
+                    dz_straight = dz_straight_double_wye, 
+                    z_straight = z_straight);
+                side_connection(r_long_radius_wye, ay_double_wye, dz = 5, as_clearance = false);
+                side_connection(r_long_radius_wye, ay_double_wye, dz = 30, as_clearance = false);
             }
-            translate([0, 0, dz_straight]) rotate([0, 0, 0]) flute_bare_clamp(as_clearance = true, z_neck=0);
-            side_connection(r_long_radius, ay_double_wye, dz = 5, as_mounting_target = false, as_clearance = true);
-            side_connection(r_long_radius, ay_double_wye, dz = 30, as_mounting_target = false, as_clearance = true);
+            translate([0, 0, dz_straight_double_wye]) { 
+                flute_bare_clamp(as_clearance = true, z_neck = 0, ptfe_insertion = 8);
+            }
+            side_connection(r_long_radius_wye, ay_double_wye, dz = 5, as_clearance = true);
+            side_connection(r_long_radius_wye, ay_double_wye, dz = 30, as_clearance = true);
             if (show_cross_section) {
                 plane_clearance(RIGHT);
             }
@@ -282,7 +297,7 @@ module flute_long_radius_wye() {
 }
 
 
-module flute_bare_clamp(as_clearance=false, drilled_out=true, z_neck = 5) {
+module flute_bare_clamp(as_clearance=false, drilled_out=true, z_neck = 5, ptfe_insertion = 0) {
     clamp = flute_clamp_connector();
     null_connector =     
         quarter_turn_connector(
@@ -296,8 +311,12 @@ module flute_bare_clamp(as_clearance=false, drilled_out=true, z_neck = 5) {
     module cavity() {
         modified_filament_clearance = filament_clearance + (drilled_out ? 0.25 : 0);
         flute_barbed_tubing_clearance();
-        translate([0, 0, z_clamp + core_length + z_neck])  
+        translate([0, 0, z_clamp + core_length + z_neck]) { 
             flute_filament_path(is_entrance = false, multiplier = 1, modified_filament_clearance, teardrop=true);
+        }
+        translate([0, 0, -z_clamp]) { 
+            can(d=od_ptfe_tubing, h = ptfe_insertion, center = BELOW);
+        }
         
     }
     if (as_clearance) {
