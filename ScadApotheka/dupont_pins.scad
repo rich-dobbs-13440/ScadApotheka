@@ -309,7 +309,9 @@ module dupont_connector(
         housing = DUPONT_STD_HOUSING(),
         has_pin = false, 
         has_wire = true,
-        color_alpha = 1) {
+        color_alpha = 1, 
+        as_clearance = false,
+        cl_s_housing = 0.5) {
             
     pin_cavity = [
         DUPONT_HOUSING_WIDTH() - 2*DUPONT_HOUSING_WALL() , 
@@ -317,6 +319,7 @@ module dupont_connector(
         DUPONT_STD_HOUSING()
     ];
     housing_extent = [DUPONT_HOUSING_WIDTH(), DUPONT_HOUSING_WIDTH(), housing]; 
+    housing_clearances = as_clearance ? [2*cl_s_housing, 2*cl_s_housing, 0] : [0, 0, 0];
         
     // center_orient(orient, BELOW)        
     center_rotation(center) {  
@@ -328,12 +331,15 @@ module dupont_connector(
                 // For headers should make it square!
                 //color("silver") can(d=DUPONT_PIN_SIZE(), h = DUPONT_PIN_LENGTH(), center=BELOW);
                 male_pin(orient=ABOVE, insulation_wrap=1, conductor_wrap=1, strip=false);
+                if (as_clearance) {
+                    can(d=1, h=DUPONT_PIN_LENGTH(), center=BELOW, $fn=12);
+                }
             } else {
                 female_pin(orient=ABOVE, insulation_wrap=1, conductor_wrap=1, strip=false);
             }
             difference() {   
                 color(housing_color, color_alpha) 
-                    block(housing_extent, center = ABOVE, rank=10);
+                    block(housing_extent + housing_clearances, center = ABOVE, rank=10);
                 
                 if (!has_pin) {
                     can(d=DUPONT_PIN_SIZE() + 0.5, h = 0.1, taper=DUPONT_PIN_SIZE(), center=ABOVE, rank = 15);
