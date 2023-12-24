@@ -324,22 +324,28 @@ module dupont_connector(
     // center_orient(orient, BELOW)        
     center_rotation(center) {  
         center_rotation(BELOW) { 
-            if (has_wire) {
+            if (has_wire && !as_clearance) {
                 color(wire_color) can(d=DUPONT_WIRE_DIAMETER(), h = housing + 8, center=ABOVE, rank=-3);
             }
-            if (has_pin) {
-                // For headers should make it square!
-                //color("silver") can(d=DUPONT_PIN_SIZE(), h = DUPONT_PIN_LENGTH(), center=BELOW);
-                male_pin(orient=ABOVE, insulation_wrap=1, conductor_wrap=1, strip=false);
+            if (has_pin) {                
                 if (as_clearance) {
-                    can(d=1, h=DUPONT_PIN_LENGTH(), center=BELOW, $fn=12);
+                    can(d=1.2, h=DUPONT_PIN_LENGTH() + 2, center=BELOW, $fn=12);
+                } else {
+                    male_pin(orient=ABOVE, insulation_wrap=1, conductor_wrap=1, strip=false);
                 }
             } else {
                 female_pin(orient=ABOVE, insulation_wrap=1, conductor_wrap=1, strip=false);
             }
             difference() {   
-                color(housing_color, color_alpha) 
+                color(housing_color, color_alpha) {
                     block(housing_extent + housing_clearances, center = ABOVE, rank=10);
+                    if (as_clearance) {
+                        hull() {
+                            block([housing_extent.x + housing_clearances.x, housing_extent.y + housing_clearances.y, 0.01], center=ABOVE);
+                            translate([0, 0, -0.7*housing_extent.x]) block([0.01, 0.01, 0.01], center=ABOVE);
+                        }
+                    }
+                }
                 
                 if (!has_pin) {
                     can(d=DUPONT_PIN_SIZE() + 0.5, h = 0.1, taper=DUPONT_PIN_SIZE(), center=ABOVE, rank = 15);
