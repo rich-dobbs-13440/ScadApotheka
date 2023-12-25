@@ -25,14 +25,17 @@ a_lot = 100 + 0;
 
 /* [Ouput Control] */
     show_vitamins = true;
+    show_rails = true;
+    show_body = true;    
     show_holder = true;
     show_nuts = true;
     show_screws = true;
-    //orient_for_printing = true;
+    orient_for_printing = false;
+
     show_cross_section = false;
     dz_cross_section = 0; // [-10 : 0.1 : 10]
 
-/* [Sensor Mount Design] */
+/* [Sensor Holder Design] */
     x_padding = 1;
     y_padding = 1;
     z_above = 0.5;
@@ -40,12 +43,13 @@ a_lot = 100 + 0;
     y_wall = 1;
     cl_wall = 0.5;
     cl_d_lead = 1;
+
     
     cl_prong_tip = 0.6;
     cl_d_registration_pin = 0.5;
     cl_x_prong = 0.25;
     
-/* [Wire design] */
+/* [Wire Design] */
     positive_lead_screw = "M2x6";
     lead_screw = "M2x8";
 
@@ -69,12 +73,21 @@ a_lot = 100 + 0;
     z_connection_blank = 12;
     dx_connection_blank = -2;
     dy_connection_blank = 1.35;
-    dz_connection_blank = -0;
-    cl_connection_d_lead = 0.6;
+    dz_connection_blank = 0;
+    cl_connection_d_lead = 1;
     
     d_lead_entry = 2;
     dy_dupont_pin = 4.5;
     h_resistor_lead = 20;
+
+/* [Rail Design] */
+    cl_dx_rails = 0.5;
+    cl_dy_clip_tip = 0.5;
+    dx_clip_tip_overlap = 1;
+    
+/* [Build Plate Layout] */
+    x_body_bp = -5;
+    y_body_bp = 10;
 
 module end_of_customization() {}
 
@@ -168,7 +181,7 @@ module tcrt5000_reflective_optical_sensor(as_clearance = false, h_lead = h_lead,
 }
 
 
-module lead_cavity(h_lead, dz_pinch) {
+module tcrt5000_lead_cavity(h_lead, dz_pinch) {
    pairwise_hull() {
        sphere(d=d_lead_entry); 
        translate([0, 0, dz_pinch]) sphere(d=d_lead + cl_connection_d_lead); 
@@ -177,7 +190,7 @@ module lead_cavity(h_lead, dz_pinch) {
 }
 
 
-module connection_screws(as_clearance = true, show_nuts = true, show_screws = true) {
+module tcrt5000_connection_screws(as_clearance = true, show_nuts = true, show_screws = true) {
     h_screw_access = 10;
     clh = 10;
     clk = 0.5;
@@ -298,7 +311,7 @@ module connection_screws(as_clearance = true, show_nuts = true, show_screws = tr
     translate([dx_resistor_lead_sensor, -dy_lead - d_lead , 0]) {
         rotate([0, ay_resistor_lead_sensor, 0]) {
             if (as_clearance) {
-                lead_cavity(h_lead = z_connection_blank, dz_pinch = dz_pinch_resistor_lead_sensor);
+                tcrt5000_lead_cavity(h_lead = z_connection_blank, dz_pinch = dz_pinch_resistor_lead_sensor);
             } else {
                 color("YELLOW") { 
                     can(d=d_lead_w_cl, h = h_resistor_lead, center = BELOW, $fn=12);
@@ -310,7 +323,7 @@ module connection_screws(as_clearance = true, show_nuts = true, show_screws = tr
     translate([dx_resistor_lead_led, -dy_lead - d_lead , 0]) {
         rotate([0, ay_resistor_lead_led, 0]) {
             if (as_clearance) {
-                lead_cavity(h_lead = h_resistor_lead_led, dz_pinch = dz_pinch_resistor_lead_led); 
+                tcrt5000_lead_cavity(h_lead = h_resistor_lead_led, dz_pinch = dz_pinch_resistor_lead_led); 
             } else {       
                 color("PURPLE") {
                     can(d=d_lead_w_cl, h = h_resistor_lead, center = BELOW, $fn=12); 
@@ -322,7 +335,7 @@ module connection_screws(as_clearance = true, show_nuts = true, show_screws = tr
    translate([dx_negative_nut, -dy_lead, 0]) {
        translate([-0.8, 0, 0]) {
             if (as_clearance) {
-                lead_cavity(h_lead = z_connection_blank, dz_pinch = -7); 
+                tcrt5000_lead_cavity(h_lead = z_connection_blank, dz_pinch = -7); 
             } else {      
                color("YELLOW") { 
                     can(d=d_lead_w_cl, h = h_lead, center = BELOW, $fn=12); 
@@ -331,7 +344,7 @@ module connection_screws(as_clearance = true, show_nuts = true, show_screws = tr
        }
        translate([0.8, 0, 0]) {
             if (as_clearance) {
-                lead_cavity(h_lead = z_connection_blank, dz_pinch = -7); 
+                tcrt5000_lead_cavity(h_lead = z_connection_blank, dz_pinch = -7); 
             } else {
                 color("PURPLE") {
                    can(d=d_lead_w_cl, h = h_lead, center = BELOW, $fn=12); 
@@ -342,7 +355,13 @@ module connection_screws(as_clearance = true, show_nuts = true, show_screws = tr
 }
 
 module tcrt5000_reflective_optical_sensor_holder(
-    x_padding = x_padding, y_padding = y_padding, z_above = z_above) {
+    show_body = true,
+    show_rails = true,
+    orient_for_printing = false,
+    x_padding = x_padding, 
+    y_padding = y_padding, 
+    z_above = z_above
+    ) {
    top_blank = [sensor_body.x + 2 * x_padding, sensor_body.y + 2 * y_padding, z_above];
    lead_rotations = [
         [0, ay_center, 0],
@@ -361,6 +380,42 @@ module tcrt5000_reflective_optical_sensor_holder(
    module prong_cavity() {
        z_below = prong.z - prong_tip.z - cl_prong_tip;
        translate([0, 0, -z_below]) block([2, a_lot, 2], center=BELOW);
+   }
+   
+   module clip_rails(as_clearance = true) {
+       dz_rails = -3;
+       y_strap = 1;
+       dx_rails = x_connection_blank/2  + (as_clearance ? 0 : cl_dx_rails); 
+       x_strap = x_connection_blank +  2 * cl_dx_rails;
+       dy_to_base = dy_connection_blank - y_connection_blank/2 - y_strap;
+       y_clip_tip = 2;
+       dy_clip_tip = y_strap + y_connection_blank + cl_dy_clip_tip;
+       y_rail = y_connection_blank + y_strap + cl_dy_clip_tip + y_clip_tip;
+       dx_latch = -cl_dx_rails - dx_clip_tip_overlap;
+       latch_support = [dx_clip_tip_overlap + cl_dx_rails, 1, abs(dz_rails)];
+       color(PART_2, alpha=1) {
+            translate([dx_connection_blank, dy_to_base, 0]) {
+                center_reflect([1, 0, 0]) translate([dx_rails, 0, dz_rails]) {
+                   rotate([0, 45, 0]) block([2, y_rail, 2], center=RIGHT);
+                   if (!as_clearance) {
+                       // Add clip tip
+                       translate([0, dy_clip_tip, 0]) {
+                           hull() {
+                                translate([dx_latch, 0, 0]) rotate([0, 45, 0]) 
+                                    block([2, 1, 2], center=RIGHT);
+                                rotate([0, 45, 0]) block([2, y_clip_tip, 2], center=RIGHT);
+                           }
+                           translate([dx_latch, 0, 0]) {
+                               block(latch_support, center = FRONT+RIGHT+ABOVE);
+                           }
+                      }
+                       // Printing support
+                       translate([0, 0, 0]) block([sqrt(2), y_rail, abs(dz_rails)], center=FRONT+RIGHT + ABOVE);
+                    } 
+                }
+               translate([0, 0, 0]) block([x_strap, 1, 3], center=RIGHT+BELOW);
+           }
+       }
    }
    
     module label(label, dx, dy, size) {
@@ -385,66 +440,72 @@ module tcrt5000_reflective_optical_sensor_holder(
     }
 
     module shape() {
-        difference() {
-            union() {
-                blank();
-                connection_blank();
-
-            }
-            tcrt5000_reflective_optical_sensor(as_clearance=true, lead_rotations = lead_rotations) {
-                lead_cavity(h_lead = h_lead, dz_pinch = -8);
-                lead_cavity(h_lead = h_lead, dz_pinch = -8);
-                lead_cavity(h_lead = h_lead, dz_pinch = -6);
-                lead_cavity(h_lead = h_lead, dz_pinch = -6);
-            }
-            connection_screws(as_clearance = true);
-            prong_cavity(); 
-            if (show_cross_section) {
-                translate([0, dz_cross_section, 0]) plane_clearance(RIGHT); 
+        color(PART_1, alpha=1) {
+            difference() {
+                union() {
+                    blank();
+                    connection_blank();
+                }
+                tcrt5000_reflective_optical_sensor(as_clearance=true, lead_rotations = lead_rotations) {
+                    tcrt5000_lead_cavity(h_lead = h_lead, dz_pinch = -8);
+                    tcrt5000_lead_cavity(h_lead = h_lead, dz_pinch = -8);
+                    tcrt5000_lead_cavity(h_lead = h_lead, dz_pinch = -6);
+                    tcrt5000_lead_cavity(h_lead = h_lead, dz_pinch = -6);
+                }
+                tcrt5000_connection_screws(as_clearance = true);
+                prong_cavity(); 
+                clip_rails(as_clearance = true);
+                if (show_cross_section) {
+                    translate([0, dz_cross_section, 0]) plane_clearance(RIGHT); 
+                }
             }
         }
+        color("black") {
+            label("-", dx=-12, dy=4, size=7);
+        }
+        color("yellow") {
+            label("s", dx=-5.5, dy=2, size=4);
+        }
+        color("red") {
+            label("+", dx=3, dy=7, size=5);
+        }   
+        color("purple") {
+            label("33Ω", dx=1.5, dy=2.2, size=2.5);
+        }
+        color("yellow") {
+            label("8.2kΩ", dx=-13, dy=-2.5, size=1.6);
+        }           
     }
-    if (show_vitamins) {
-        connection_screws(as_clearance = false, show_nuts = show_nuts, show_screws = show_screws);
-        tcrt5000_reflective_optical_sensor(lead_rotations = lead_rotations);
+    
+    if (orient_for_printing) {
+        if (show_body) { 
+            z_for_printing = x_connection_blank/2 - dx_connection_blank;
+            translate([x_body_bp, y_body_bp, z_for_printing]) 
+            rotate([0, -90, 0]) shape();
+        }
+        if (show_rails) {
+            rotate([0, 180, 0]) clip_rails(as_clearance = false);
+        }
+    } else {
+        if (show_vitamins) {
+            tcrt5000_connection_screws(as_clearance = false, show_nuts = show_nuts, show_screws = show_screws);
+            tcrt5000_reflective_optical_sensor(lead_rotations = lead_rotations);
+        }
+        if (show_body) {      
+            shape();
+        }
+        if (show_rails) {
+            clip_rails(as_clearance = false);
+        }
     }
-    color(PART_1, alpha=1) shape();
-    color("black") {
-        label("-", dx=-12, dy=4, size=7);
-    }
-    color("yellow") {
-        label("s", dx=-5.5, dy=2, size=4);
-    }
-    color("red") {
-        label("+", dx=3, dy=7, size=5);
-    }   
-    color("purple") {
-        label("33Ω", dx=1.5, dy=2.2, size=2.5);
-    }
-    color("yellow") {
-        label("8.2kΩ", dx=-13, dy=-2.5, size=1.6);
-    }    
 }
 
 if (show_holder) {
-    tcrt5000_reflective_optical_sensor_holder();
+    tcrt5000_reflective_optical_sensor_holder(
+        show_body = show_body,
+        show_rails = show_rails,    
+        orient_for_printing = orient_for_printing);
 }
 
-//module skew_cube(skew_x, skew_y, skew_z) {
-//    // Define the skew matrix
-//    skew_matrix = [
-//        1,       0,      skew_x, 0,
-//        0,       1,      skew_y, 0,
-//        0,       0,      1,      0,
-//        0,       0,      0,      1
-//    ];
-//    
-//    // Apply the skew transformation using multmatrix
-//    multmatrix(skew_matrix) {
-//        cube([1, 1, 1], center = true);
-//    }
-//}
-
-//skew_cube(0.2, 0.1, 0.0); // Adjust the skew values as needed
 
 
