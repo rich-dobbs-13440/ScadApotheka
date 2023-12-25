@@ -28,8 +28,8 @@ a_lot = 100 + 0;
     show_holder = true;
     show_nuts = true;
     show_screws = true;
-    orient_for_printing = true;
-    show_cross_section = true;
+    //orient_for_printing = true;
+    show_cross_section = false;
     dz_cross_section = 0; // [-10 : 0.1 : 10]
 
 /* [Sensor Mount Design] */
@@ -46,17 +46,24 @@ a_lot = 100 + 0;
     cl_x_prong = 0.25;
     
 /* [Wire design] */
+    positive_lead_screw = "M2x6";
+    lead_screw = "M2x8";
+
     ay_center = -15;
     ay_spread = 17;
     dx_resistor_nuts = 5.5;
-    dx_resistor_lead_sensor = -6.2;
- // Tuning of LED resistor led geometry   
-    dx_resistor_lead_led = 7;
-    ay_resistor_lead_led = 28;
-    dz_pinch_resistor_lead_led = -5;
+ // Tuning of resistor lead geometry for the sensor 
+    dx_resistor_lead_sensor = -8;
+    ay_resistor_lead_sensor    = -15;
+    dz_pinch_resistor_lead_sensor = -2;
+ // Tuning of LED resistor geometry for the LED
+    dx_resistor_lead_led = 9;
+    ay_resistor_lead_led = 26;
+    dz_pinch_resistor_lead_led = -3;
     h_resistor_lead_led = 14;
 // Tuning of  negative lead geometry  
     dx_negative_nut = -11;
+    
     x_connection_blank = 24;
     y_connection_blank = 11;
     z_connection_blank = 12;
@@ -64,6 +71,7 @@ a_lot = 100 + 0;
     dy_connection_blank = 1.35;
     dz_connection_blank = -0;
     cl_connection_d_lead = 0.6;
+    
     d_lead_entry = 2;
     dy_dupont_pin = 4.5;
     h_resistor_lead = 20;
@@ -223,7 +231,7 @@ module connection_screws(as_clearance = true, show_nuts = true, show_screws = tr
                 if (as_clearance) {
                      translate([0, 0, h_screw_access]) hole_through("M2", $fn=12, h = h_screw_access);
                 } else if (show_screws) {
-                    screw("M2x6", $fn=12);
+                    screw(positive_lead_screw, $fn=12);
                 }
             }
         }
@@ -233,7 +241,7 @@ module connection_screws(as_clearance = true, show_nuts = true, show_screws = tr
                 if (as_clearance) {
                      translate([0, 0, h_screw_access]) hole_through("M2", $fn=12, h = h_screw_access);
                 } else if (show_screws) {
-                    screw("M2x8", $fn=12);
+                    screw(lead_screw, $fn=12);
                 }
             }
         }
@@ -243,7 +251,7 @@ module connection_screws(as_clearance = true, show_nuts = true, show_screws = tr
                 if (as_clearance) {
                      translate([0, 0, h_screw_access]) hole_through("M2", $fn=12, h = h_screw_access);
                 } else if (show_screws) {
-                    screw("M2x8", $fn=12);
+                    screw(lead_screw, $fn=12);
                 }
             }
         } 
@@ -253,7 +261,7 @@ module connection_screws(as_clearance = true, show_nuts = true, show_screws = tr
                 if (as_clearance) {
                      translate([0, 0, h_screw_access]) hole_through("M2", $fn=12, h = h_screw_access);
                 } else if (show_screws) {
-                    screw("M2x8", $fn=12);
+                    screw(lead_screw, $fn=12);
                 }
             }
         }          
@@ -283,22 +291,23 @@ module connection_screws(as_clearance = true, show_nuts = true, show_screws = tr
             housing_color = "yellow",         
             center = BELOW,
             has_pin = true, 
-            has_wire = false,
             as_clearance = as_clearance);
     } 
     d_lead_w_cl = as_clearance ? d_lead + cl_connection_d_lead : d_lead;
     // First resistor lead
-    translate([dx_resistor_lead_sensor, -dy_lead, 3]) {
-        if (as_clearance) {
-            lead_cavity(h_lead = z_connection_blank, dz_pinch = -8);
-        } else {
-            color("YELLOW") { 
-                can(d=d_lead_w_cl, h = h_resistor_lead, center = BELOW, $fn=12);
+    translate([dx_resistor_lead_sensor, -dy_lead - d_lead , 0]) {
+        rotate([0, ay_resistor_lead_sensor, 0]) {
+            if (as_clearance) {
+                lead_cavity(h_lead = z_connection_blank, dz_pinch = dz_pinch_resistor_lead_sensor);
+            } else {
+                color("YELLOW") { 
+                    can(d=d_lead_w_cl, h = h_resistor_lead, center = BELOW, $fn=12);
+                }
             }
         }
     }
     // Second resistor lead   
-    translate([dx_resistor_lead_led, -dy_lead, 0]) {
+    translate([dx_resistor_lead_led, -dy_lead - d_lead , 0]) {
         rotate([0, ay_resistor_lead_led, 0]) {
             if (as_clearance) {
                 lead_cavity(h_lead = h_resistor_lead_led, dz_pinch = dz_pinch_resistor_lead_led); 
@@ -354,14 +363,25 @@ module tcrt5000_reflective_optical_sensor_holder(
        translate([0, 0, -z_below]) block([2, a_lot, 2], center=BELOW);
    }
    
-    module label(label, dx, dy, size=1) {
+    module label(label, dx, dy, size) {
+        skew_x = 0.7;  // Horizontal skew amount
+        skew_y = 0.0;  // Vertical skew amount
+        
+        skew_matrix = [
+            [1, 0, skew_x, 0],
+            [0, 1, skew_y, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1]
+        ];    
         translate([dx, dy, dz_connection_blank - z_connection_blank]) {
             rotate([180, 0, 0]) {
-                linear_extrude(height = 0.4) {
-                    text(label, size = size);
+                multmatrix(skew_matrix) {
+                    linear_extrude(height = 0.7) {
+                        text(label, size = size);
+                    }
                 }
             }
-        }
+        }        
     }
 
     module shape() {
@@ -389,23 +409,42 @@ module tcrt5000_reflective_optical_sensor_holder(
         tcrt5000_reflective_optical_sensor(lead_rotations = lead_rotations);
     }
     color(PART_1, alpha=1) shape();
-    color("white") {
-        label("r1+", dx=0, dy=-2.8);
-        label("r2+", dx=-7, dy=-2.8);
-        label("r1-", dx=-11, dy=-2.8);
-        label("r2-", dx=-13, dy=-2.8);
-        
-        label("-", dx=-11, dy=2.5, size=3);
-        label("S", dx=-5.5, dy=2, size=1.5);
-        label("+3.3V", dx=3, dy=5, size=1);
-        
-        label("r1 = 33 Ω", dx=3, dy=1.5, size=1);
-        label("r2 = 8.2 kΩ", dx=3, dy=3, size=1);
+    color("black") {
+        label("-", dx=-12, dy=4, size=7);
+    }
+    color("yellow") {
+        label("s", dx=-5.5, dy=2, size=4);
+    }
+    color("red") {
+        label("+", dx=3, dy=7, size=5);
+    }   
+    color("purple") {
+        label("33Ω", dx=1.5, dy=2.2, size=2.5);
+    }
+    color("yellow") {
+        label("8.2kΩ", dx=-13, dy=-2.5, size=1.6);
     }    
 }
 
 if (show_holder) {
     tcrt5000_reflective_optical_sensor_holder();
 }
+
+//module skew_cube(skew_x, skew_y, skew_z) {
+//    // Define the skew matrix
+//    skew_matrix = [
+//        1,       0,      skew_x, 0,
+//        0,       1,      skew_y, 0,
+//        0,       0,      1,      0,
+//        0,       0,      0,      1
+//    ];
+//    
+//    // Apply the skew transformation using multmatrix
+//    multmatrix(skew_matrix) {
+//        cube([1, 1, 1], center = true);
+//    }
+//}
+
+//skew_cube(0.2, 0.1, 0.0); // Adjust the skew values as needed
 
 
