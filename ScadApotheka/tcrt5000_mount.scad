@@ -1,5 +1,8 @@
 /* 
 
+The TCRT5000 is an inexpensive reflective photosensor that operates
+using infrared light.  
+
 Usage:
     use  <ScadApotheka/tcrt5000_mount.scad>
     
@@ -7,11 +10,37 @@ Usage:
         show_body = true,
         show_rails = true,
         orient_for_printing = false,
+        orient_for_mounting = false | RIGHT | LEFT | FRONT | BEHIND,         
         show_vitamins = true,
         x_padding = x_padding, 
         y_padding = y_padding, 
         z_above = z_above);
         
+     
+This mount is designed to incorporate it into an assembly
+consisting of 3d parts.  The main advantage of this mount, 
+as compared to commercially available breakout boards
+for this component is its compact size, with the mounting 
+resistors and leads below sensor component.  It also
+provides a locking mechanism for the Dupont jumpers.
+
+Its disadvantage is that it requires assembly that is 
+somewhat finicky, and requires precision installation
+of tiny M2 screws and nuts.  Also, this setup uses
+fixed values for resistors, so it might require 
+more work on getting a proper reflective pattern for
+to detector.
+ 
+For use with 3.3VDC GPIO pins and supply voltage, the  values of 
+resistors needed are:
+    Component      Bulb     Resistor Value     Resistor Banding 
+    IR LED              blue            33Ω               Orange Orange  Black   Gold
+    IR Photodiode   black          8.2kΩ            Gray      Red       Red     Gold
+    
+TODO:  Calculate resistors needed for use with an Arduino and 5VDC.  
+
+
+Assembly, 
 */
 
 include <ScadStoicheia/centerable.scad>
@@ -76,25 +105,33 @@ a_lot = 100 + 0;
     dx_resistor_lead_sensor = -8;
     ay_resistor_lead_sensor    = -15;
     dz_pinch_resistor_lead_sensor = -2;
+    dx_sensor_resistor = -10;
+    dy_sensor_resistor = 0.5;
+    az_sensor_resistor = -17;
  // Tuning of LED resistor geometry for the LED
     dx_resistor_lead_led = 9;
     ay_resistor_lead_led = 26;
     dz_pinch_resistor_lead_led = -3;
-    h_resistor_lead_led = 14;
+    h_resistor_lead_led = 15;
+    dx_led_resistor = -6;
+    dy_led_resistor = -3.5;
+    az_led_resistor = 13;    
 // Tuning of  negative lead geometry  
     dx_negative_nut = -11;
     
     x_connection_blank = 24;
     y_connection_blank = 11;
-    z_connection_blank = 12;
+    z_connection_blank = 14;
     dx_connection_blank = -2;
     dy_connection_blank = 1.35;
     dz_connection_blank = 0;
-    cl_connection_d_lead = 1;
+    cl_connection_d_lead = 0.6;
     
     d_lead_entry = 2;
     dy_dupont_pin = 4.5;
     h_resistor_lead = 20;
+    
+    cl_d_resistor_lead = 0.5;
 
 /* [Rail Design] */
     cl_dx_rails = 0.5;
@@ -106,6 +143,31 @@ a_lot = 100 + 0;
     y_body_bp = 10;
 
 module end_of_customization() {}
+
+
+module resistor(bands, h_leds=[2, 2], as_clearance = false) {
+    d = 1.8;
+    h = 6.5;
+    h_band = 0.7;
+    dz = 1.1;
+    d_lead_w_cl = d_lead + (as_clearance ? cl_d_resistor_lead : 0);
+    color(CHROME) {
+        can(d=d_lead_w_cl, h = h_leds[0], center=BELOW, $fn=12);
+        can(d=d_lead_w_cl, h = h + h_leds[1], center=ABOVE, $fn=12);
+    }
+    
+    color("tan") hull() {
+        translate([0, 0, d/2]) sphere(d=d-0.1, $fn=20);
+        translate([0, 0, h - d]) sphere(d=d-0.1, $fn=20);  
+    }
+    for (i = [0: len(bands) - 1]) {
+        color(bands[i]) 
+            translate([0, 0,  1.2 + i*dz]) 
+                can(d=d, h = h_band);
+    }
+}
+
+
 
 
 module tcrt5000_reflective_optical_sensor(as_clearance = false, h_lead = h_lead, lead_rotations=[]) {
@@ -314,7 +376,7 @@ module tcrt5000_connection_screws(as_clearance = true, show_nuts = true, show_sc
             as_clearance = as_clearance);
     }
     // Signal_dupont connection
-    translate([-dx_resistor_nuts + 0.8, dy_dupont_pin, -9]) {
+    translate([-dx_resistor_nuts + 0.8, dy_dupont_pin, -9.]) {
             dupont_connector(
             wire_color = "yellow", 
             housing_color = "yellow",         
@@ -460,6 +522,20 @@ module tcrt5000_reflective_optical_sensor_holder(
             }
         }        
     }
+    
+    module resistors(as_clearance = false) {
+        led_bands = ["orange", "orange",  "black", "gold"];
+        sensor_bands = ["gray", "red",  "red", "gold"];
+        dz = dz_connection_blank - z_connection_blank;
+        translate([dx_led_resistor, dy_led_resistor, dz]) 
+            rotate([0, 0, az_led_resistor]) 
+                rotate([0, 90, 0]) 
+                    resistor(bands=led_bands, h_leds=[1, 2], as_clearance=as_clearance);
+        translate([dx_sensor_resistor, dy_sensor_resistor, dz]) 
+            rotate([0, 0, az_sensor_resistor])
+                rotate([0, 90, 0]) 
+                    resistor(bands=sensor_bands, h_leds=[1, 0.2], as_clearance=as_clearance);
+    }    
 
     module shape() {
         color(PART_1, alpha=1) {
@@ -477,22 +553,23 @@ module tcrt5000_reflective_optical_sensor_holder(
                 tcrt5000_connection_screws(as_clearance = true);
                 prong_cavity(); 
                 clip_rails(as_clearance = true);
+                resistors(as_clearance = true);
                 if (show_cross_section) {
                     translate([0, dz_cross_section, 0]) plane_clearance(RIGHT); 
                 }
             }
         }
         color("black") {
-            label("-", dx=-12, dy=4, size=7);
+            label("-", dx=-12, dy=4.5, size=7);
         }
         color("yellow") {
-            label("s", dx=-5.5, dy=2, size=4);
+            label("s", dx=-5.5, dy=2.5, size=4);
         }
         color("red") {
             label("+", dx=3, dy=7, size=5);
         }   
         color("purple") {
-            label("33Ω", dx=1.5, dy=2.2, size=2.5);
+            label("33Ω", dx=2.5, dy=1.5, size=2.5);
         }
         color("yellow") {
             label("8.2kΩ", dx=-13, dy=-2.5, size=1.6);
@@ -526,6 +603,7 @@ module tcrt5000_reflective_optical_sensor_holder(
             if (show_vitamins) {
                 tcrt5000_connection_screws(as_clearance = false, show_nuts = show_nuts, show_screws = show_screws);
                 tcrt5000_reflective_optical_sensor(lead_rotations = lead_rotations);
+                resistors(as_clearance = false);
             }
             if (show_body) {      
                 shape();
