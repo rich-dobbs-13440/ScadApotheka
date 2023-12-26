@@ -1,3 +1,19 @@
+/* 
+
+Usage:
+    use  <ScadApotheka/tcrt5000_mount.scad>
+    
+    tcrt5000_reflective_optical_sensor_holder(
+        show_body = true,
+        show_rails = true,
+        orient_for_printing = false,
+        show_vitamins = true,
+        x_padding = x_padding, 
+        y_padding = y_padding, 
+        z_above = z_above);
+        
+*/
+
 include <ScadStoicheia/centerable.scad>
 use <ScadStoicheia/visualization.scad>
 include <ScadApotheka/material_colors.scad>
@@ -358,6 +374,9 @@ module tcrt5000_reflective_optical_sensor_holder(
     show_body = true,
     show_rails = true,
     orient_for_printing = false,
+    orient_for_mounting = false, 
+    show_vitamins = true,
+    mouse_ears = false,
     x_padding = x_padding, 
     y_padding = y_padding, 
     z_above = z_above
@@ -407,6 +426,9 @@ module tcrt5000_reflective_optical_sensor_holder(
                            }
                            translate([dx_latch, 0, 0]) {
                                block(latch_support, center = FRONT+RIGHT+ABOVE);
+                               if (mouse_ears) {
+                                   translate([2, 0, -dz_rails]) can(d=5, h=0.2, center = BELOW);
+                               }
                            }
                       }
                        // Printing support
@@ -487,15 +509,30 @@ module tcrt5000_reflective_optical_sensor_holder(
             rotate([0, 180, 0]) clip_rails(as_clearance = false);
         }
     } else {
-        if (show_vitamins) {
-            tcrt5000_connection_screws(as_clearance = false, show_nuts = show_nuts, show_screws = show_screws);
-            tcrt5000_reflective_optical_sensor(lead_rotations = lead_rotations);
-        }
-        if (show_body) {      
-            shape();
-        }
-        if (show_rails) {
-            clip_rails(as_clearance = false);
+        dy_to_mount = y_connection_blank/2 - dy_connection_blank;
+        translation = 
+            orient_for_mounting == FRONT ? [dy_to_mount, 0, 0] : 
+            orient_for_mounting == BEHIND ? [-dy_to_mount, 0, 0] : 
+            orient_for_mounting == LEFT ? [0, dy_to_mount, 0] : 
+            orient_for_mounting == RIGHT ? [0, -dy_to_mount, 0] : 
+            [0, 0, 0];
+        rotation = 
+            orient_for_mounting == FRONT ? [0, 0, -90] : 
+            orient_for_mounting == BEHIND ? [0, 0, 90] : 
+            orient_for_mounting == LEFT ? [0, 0, 0] : 
+            orient_for_mounting == RIGHT ? [0, 0, 180] :
+            [0, 0, 0] ;
+        translate(translation) rotate(rotation) {
+            if (show_vitamins) {
+                tcrt5000_connection_screws(as_clearance = false, show_nuts = show_nuts, show_screws = show_screws);
+                tcrt5000_reflective_optical_sensor(lead_rotations = lead_rotations);
+            }
+            if (show_body) {      
+                shape();
+            }
+            if (show_rails) {
+                clip_rails(as_clearance = false);
+            }
         }
     }
 }
@@ -503,7 +540,10 @@ module tcrt5000_reflective_optical_sensor_holder(
 if (show_holder) {
     tcrt5000_reflective_optical_sensor_holder(
         show_body = show_body,
-        show_rails = show_rails,    
+        show_rails = show_rails,  
+        show_vitamins = show_vitamins,
+        orient_for_mounting = RIGHT,
+        mouse_ears = true,
         orient_for_printing = orient_for_printing);
 }
 
