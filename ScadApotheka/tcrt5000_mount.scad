@@ -77,6 +77,15 @@ a_lot = 100 + 0;
     show_screws = true;
     show_pins = true;
     orient_for_printing = false;
+    orient_for_mounting = "CENTER"; // [CENTER, FRONT, BEHIND, RIGHT, LEFT]
+    
+    function orient_for_mounting(a) = 
+        a  == "CENTER" ? CENTER:
+        a  == "FRONT" ? FRONT:
+        a  == "BEHIND" ? BEHIND:
+        a  == "RIGHT" ? RIGHT:
+        a  == "LEFT" ? LEFT:
+        assert(false); 
 
     show_cross_section = false;
     dy_cross_section = 0; // [-8 : 0.1 : 15]
@@ -96,16 +105,32 @@ a_lot = 100 + 0;
     cl_d_registration_pin = 0.5;
     cl_x_prong = 0.25;
     
+/* [Lead Bending Design] */
+    ax_sensor_p = 7;
+    ay_sensor_p = -15;
+    ax_led_p = 7;
+    ay_led_p = 15;
+    ax_led_n = -3;
+    ay_led_n =-2;
+    ax_sensor_n = -3;
+    ay_sensor_n = 5;
+
+    ay_spread = 17;   
+   
+   lead_rotations = [
+        [ax_sensor_p, ay_sensor_p, 0],
+        [ax_led_p, ay_led_p, 0],
+        [ax_led_n, ay_led_n, 0],
+        [ax_sensor_n, ay_sensor_n, 0]
+    ];   
+    
 /* [Wire Design] */
     //side_offset_dupont_pin = 0.35;
     side_offset_dupont_pin = 0.8;
     side_offset_resistor_lead = 0.8;  
     nut_tightness_offset = 0.35;
-    
-    lead_screw = "M2x6";
 
-    ay_center = -15;
-    ay_spread = 17;
+
     dx_resistor_nuts = 5.5;
  // Tuning of resistor lead geometry for the sensor
     dx_sensor_nut = -0.35;  // Relative to the lead   
@@ -129,16 +154,16 @@ a_lot = 100 + 0;
     dy_led_resistor = -3.5;
     az_led_resistor = 13;    
 // Tuning of  negative lead geometry  
-    dx_negative_nut = -8;
-    dy_negative_nut = 3;
-    dz_negative_nut = -6;
+    dx_negative_nut = 3.5;
+    dy_negative_nut = 2.;
+    dz_negative_nut = -17;
     
-    x_connection_blank = 20;
-    y_connection_blank = 14;
-    z_connection_blank = 18;
-    dx_connection_blank = -2.5;
-    dy_connection_blank = 2;
-    dz_connection_blank = 0;
+    x_connection_blank = 17;
+    y_connection_blank = 13;
+    z_connection_blank = 24;
+    dx_connection_blank = -1.5;
+    dy_connection_blank = 1.5;
+    dz_connection_blank = 0.25;
     cl_connection_d_lead = 0.6;
     
     d_lead_entry = 2;
@@ -147,7 +172,7 @@ a_lot = 100 + 0;
     
     cl_d_resistor_lead = 1;
     cl_d_resistor_body = 1;
-    dz_resistor = -10;
+    dz_resistor = -16;
 
 /* [Rail Design] */
     cl_dy_rails = 0.5;
@@ -155,7 +180,7 @@ a_lot = 100 + 0;
     dx_clip_tip_overlap = 1;
     
 /* [Build Plate Layout] */
-    x_body_bp = -5;
+    x_body_bp = 20;
     y_body_bp = 10;
 
 module end_of_customization() {}
@@ -170,7 +195,7 @@ module rotate_yaw_pitch_and_roll(yaw, pitch, roll) {
 
 
 
-module resistor(bands, h_leds=[2, 2], as_clearance = false) {
+module resistor(bands, h_leds=[20, 20], as_clearance = false) {
     d_band = 1.8;
     h = 6.5;
     h_band = 0.7;
@@ -384,14 +409,16 @@ module tcrt5000_led_lead_screw(as_clearance = true, show_nut = true, show_screw 
     // For the LED screw, the screw will contact the leads, not the nut.  So hole thickness applied differently
     tcrt5000_default_lead(as_clearance = as_clearance);
     clk = 0.5;
-    screw_hole_thickness = 2.5;
+    screw_hole_thickness = 3;
     h_screw_access = 10; 
     // Fiddle to get stuff to work out! 
     screw_access_adjustment = 0.7;  
     translate([dx_led_nut, dy_led_nut, dz_led_nut]) {
         rotate([0, 90, 0]) {
             if (as_clearance) {
-                translate([0, 0, -screw_hole_thickness]) rotate([0, 0, -90]) nutcatch_sidecut(name   = "M2",  clh    =  1.2,  clk    = 1);
+                translate([0, 0, -screw_hole_thickness]) 
+                    rotate([0, 0, -90]) 
+                        nutcatch_sidecut(name   = "M2",  clh    =  1.2,  clk = 0.5);
                 translate([0, 0, h_screw_access - screw_access_adjustment]) 
                     hole_through("M2", $fn=12, h = h_screw_access, l=4.2);
                 // Resistor lead
@@ -408,8 +435,8 @@ module tcrt5000_led_lead_screw(as_clearance = true, show_nut = true, show_screw 
         }
         led_bands = ["orange", "orange",  "black", "gold"];
         dy_nut = 0.35;
-        translate([-dx_led_nut, side_offset_resistor_lead, dz_resistor])  {
-            resistor(bands=led_bands, h_leds=[2, 7], as_clearance=as_clearance);          
+        translate([-screw_hole_thickness, side_offset_resistor_lead, dz_resistor])  {
+            resistor(bands=led_bands, h_leds=[2, 12], as_clearance=as_clearance);          
         }        
     }
 
@@ -418,15 +445,15 @@ module tcrt5000_led_lead_screw(as_clearance = true, show_nut = true, show_screw 
 
 module tcrt5000_sensor_lead_screw(as_clearance = true, show_nut = true, show_screw = true, show_pin) {
     tcrt5000_default_lead(as_clearance = as_clearance);
-    screw_hole_thickness = 3.5;
+    screw_hole_thickness = 2.5;
     h_screw_access = 10;  
     vertical_offset_dupont_pin = -4.0;
     pin_translation = [vertical_offset_dupont_pin, side_offset_dupont_pin, screw_hole_thickness ];
-    sensor_lead_screw  = "M2x6";  
+    sensor_lead_screw  = "M2x4";  
     translate([dx_sensor_nut, dy_sensor_nut, dz_sensor_nut]) {
         rotate([0, -90, 0]) {
             if (as_clearance) {
-                rotate([0, 0, -90]) nutcatch_sidecut(name   = "M2",  clh  =  1.2,  clk = 1);
+                rotate([0, 0, -90]) nutcatch_sidecut(name   = "M2",  clh  =  1.2,  clk = 0.5);
                 translate([0, 0, h_screw_access + screw_hole_thickness]) 
                     hole_through("M2", $fn=12, h = h_screw_access, l=6.5);
                 translate(pin_translation) { 
@@ -464,7 +491,7 @@ module tcrt5000_sensor_lead_screw(as_clearance = true, show_nut = true, show_scr
         }
         sensor_bands = ["gray", "red",  "red", "gold"];    
         translate([0, side_offset_resistor_lead, dz_resistor])  
-                resistor(bands=sensor_bands, h_leds=[2, 7], as_clearance=as_clearance);           
+                resistor(bands=sensor_bands, h_leds=[2, 12], as_clearance=as_clearance);           
     }    
  
 
@@ -493,7 +520,7 @@ module tcrt5000_positive_lead_screw(as_clearance = true, show_nut = true, show_s
     positive_lead_screw = "M2x6";
 
     pin_translation = [
-        side_offset_dupont_pin, 
+        -side_offset_dupont_pin, 
         screw_hole_thickness + nut_tightness_offset, 
         vertical_offset_dupont_pin
     ];  
@@ -532,7 +559,7 @@ module tcrt5000_positive_lead_screw(as_clearance = true, show_nut = true, show_s
                 block([2*dx_lead, d_lead + cl_d_lead, 1]);
                 translate([0, 0, dz_positive_lead]) sphere(d = d_lead + cl_d_lead);
             }
-            translate([0, 0, dz_positive_lead]) block([2.5, d_lead + cl_d_lead, a_lot], center = BELOW);
+            //translate([0, 0, dz_positive_lead]) block([2.5, d_lead + cl_d_lead, a_lot], center = BELOW);
         }
     }
         
@@ -550,15 +577,8 @@ module tcrt5000_reflective_optical_sensor_holder(
     z_above = z_above
     ) {
    top_blank = [sensor_body.x + 2 * x_padding, sensor_body.y + 2 * y_padding, z_above];
-    ax_led = -7;
-    ax_sensor = -7;
-    ay_sensor = 9;
-   lead_rotations = [
-        [0, ay_center, 0],
-        [0, -ay_center, 0],
-        [ax_led, -ay_sensor, 0],
-        [ax_sensor, ay_sensor, 0]
-    ];
+
+
         
    module blank() {
        block(top_blank, center=ABOVE);
@@ -680,18 +700,18 @@ module tcrt5000_reflective_optical_sensor_holder(
             rotate([0, 180, 0]) clip_rails(as_clearance = false);
         }
     } else {
-        dy_to_mount = y_connection_blank/2 - dy_connection_blank;
+        dx_to_mount = x_connection_blank/2 + dx_connection_blank;
         translation = 
-            orient_for_mounting == FRONT ? [dy_to_mount, 0, 0] : 
-            orient_for_mounting == BEHIND ? [-dy_to_mount, 0, 0] : 
-            orient_for_mounting == LEFT ? [0, dy_to_mount, 0] : 
-            orient_for_mounting == RIGHT ? [0, -dy_to_mount, 0] : 
+            orient_for_mounting == FRONT ? [dx_to_mount, 0, 0] : 
+            orient_for_mounting == BEHIND ? [-dx_to_mount, 0, 0] : 
+            orient_for_mounting == LEFT ? [0, -dx_to_mount, 0] : 
+            orient_for_mounting == RIGHT ? [0, dx_to_mount, 0] : 
             [0, 0, 0];
         rotation = 
-            orient_for_mounting == FRONT ? [0, 0, -90] : 
-            orient_for_mounting == BEHIND ? [0, 0, 90] : 
-            orient_for_mounting == LEFT ? [0, 0, 0] : 
-            orient_for_mounting == RIGHT ? [0, 0, 180] :
+            orient_for_mounting == FRONT ? [0, 0, 180] : 
+            orient_for_mounting == BEHIND ? [0, 0, 0] : 
+            orient_for_mounting == LEFT ? [0, 0, 90] : 
+            orient_for_mounting == RIGHT ? [0, 0, -90] :
             [0, 0, 0] ;
         translate(translation) rotate(rotation) {
             if (show_vitamins) {
@@ -723,7 +743,7 @@ if (show_holder) {
         show_body = show_body,
         show_rails = show_rails,  
         show_vitamins = show_vitamins,
-        orient_for_mounting = CENTER,
+        orient_for_mounting = orient_for_mounting(orient_for_mounting),
         mouse_ears = true,
         orient_for_printing = orient_for_printing);
 }
